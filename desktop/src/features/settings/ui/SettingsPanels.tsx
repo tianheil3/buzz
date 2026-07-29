@@ -50,10 +50,13 @@ import {
   ACCENT_COLORS,
   isBuzzTheme,
   NEUTRAL_ACCENT,
-  SHELL_STYLES,
-  type ShellStyleId,
   useTheme,
 } from "@/shared/theme/ThemeProvider";
+import {
+  getShellStyle,
+  INDEPENDENT_SHELL_THEME_NAMES,
+  isIndependentShellThemeName,
+} from "@/shared/theme/shell-styles";
 import {
   LIGHT_THEMES,
   SYNTAX_THEMES,
@@ -236,6 +239,12 @@ export const settingsSections: SettingsSectionDescriptor[] = [
 ];
 
 function formatThemeLabel(name: string): string {
+  if (isIndependentShellThemeName(name)) {
+    return getShellStyle(name).label;
+  }
+  if (name === "buzz" || name === "buzz-dark") {
+    return name === "buzz-dark" ? "Buzz Dark (Raft)" : "Buzz (Raft)";
+  }
   return name
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -420,20 +429,27 @@ function ThemeSettingsCard() {
     isDark,
     accentColor,
     setAccentColor,
-    shellStyle,
-    setShellStyle,
     followSystem,
     setFollowSystem,
   } = useTheme();
 
-  // Buzz themes use shell-style chrome (Raft / Persona5 / …). Free accent
-  // picker is hidden while Buzz is active; shell style picker shows instead.
+  // Chrome shell themes (Buzz Raft pair + independent Persona5 / multi-palette)
+  // pin their own accent; free accent picker is for plain Shiki themes only.
+  // Independent shells appear in the main theme grid — no secondary skin switch.
   const accentPickerHidden = isBuzzTheme(themeName);
-  const shellPickerVisible = isBuzzTheme(themeName);
   const shouldReduceMotion = useReducedMotion();
 
   const previewVarsByTheme = useThemePreviewVars();
   const { pairedLight, lightOnly, darkOnly } = useThemeCategories();
+
+  // Independent shell themes (Persona5 / multi-palette) — first-class tiles.
+  const independentChromeThemes = useMemo(
+    () =>
+      INDEPENDENT_SHELL_THEME_NAMES.map(
+        (id) => id as SyntaxThemeName,
+      ),
+    [],
+  );
 
   // Determine the active mode from current state
   const activeMode: AppearanceMode = followSystem
@@ -444,11 +460,13 @@ function ThemeSettingsCard() {
 
   const [selectedMode, setSelectedMode] = useState<AppearanceMode>(activeMode);
 
-  const getVars = (name: SyntaxThemeName) =>
-    withAccentPreviewVars(
-      previewVarsByTheme[name] ?? getThemeFallbackPreviewVars(name),
-      accentColor,
-    );
+  const getVars = (name: SyntaxThemeName) => {
+    const base =
+      previewVarsByTheme[name] ?? getThemeFallbackPreviewVars(name);
+    // Chrome shells own accent — keep shell primary, do not tint with free accent.
+    if (isBuzzTheme(name)) return base;
+    return withAccentPreviewVars(base, accentColor);
+  };
 
   // All light themes (paired light + light-only)
   const allLightThemes = useMemo(
@@ -604,6 +622,26 @@ function ThemeSettingsCard() {
         ) : null}
         <div className="max-h-[430px] overflow-y-auto rounded-lg pt-2">
           <div className="flex flex-wrap gap-4 p-1">
+            {/* Independent chrome themes always visible at the top of the list
+                (Persona5 / Max / multi-palette) — same level as light/dark,
+                not a secondary skin switch under Buzz Dark. */}
+            {independentChromeThemes
+              .filter((name) => {
+                if (selectedMode === "system") return true;
+                if (selectedMode === "light") return LIGHT_THEMES.has(name);
+                return !LIGHT_THEMES.has(name);
+              })
+              .map((name) => (
+                <SingleThemeTile
+                  isActive={
+                    selectedThemeName === name || themeName === name
+                  }
+                  key={`independent-${name}`}
+                  name={name}
+                  onSelect={() => handleSelectTheme(name)}
+                  vars={getVars(name)}
+                />
+              ))}
             {selectedMode === "system" &&
               pairedLight.map((lightName) => {
                 const darkName = getThemePair(lightName);
@@ -620,38 +658,34 @@ function ThemeSettingsCard() {
                 );
               })}
             {selectedMode === "light" &&
-              allLightThemes.map((name) => (
-                <SingleThemeTile
-                  isActive={selectedThemeName === name}
-                  key={name}
-                  name={name}
-                  onSelect={() => handleSelectTheme(name)}
-                  vars={getVars(name)}
-                />
-              ))}
+              allLightThemes
+                .filter((name) => !isIndependentShellThemeName(name))
+                .map((name) => (
+                  <SingleThemeTile
+                    isActive={selectedThemeName === name}
+                    key={name}
+                    name={name}
+                    onSelect={() => handleSelectTheme(name)}
+                    vars={getVars(name)}
+                  />
+                ))}
             {selectedMode === "dark" &&
-              allDarkThemes.map((name) => (
-                <SingleThemeTile
-                  isActive={selectedThemeName === name}
-                  key={name}
-                  name={name}
-                  onSelect={() => handleSelectTheme(name)}
-                  vars={getVars(name)}
-                />
-              ))}
+              allDarkThemes
+                .filter((name) => !isIndependentShellThemeName(name))
+                .map((name) => (
+                  <SingleThemeTile
+                    isActive={selectedThemeName === name}
+                    key={name}
+                    name={name}
+                    onSelect={() => handleSelectTheme(name)}
+                    vars={getVars(name)}
+                  />
+                ))}
           </div>
         </div>
       </div>
 
-      {/* Shell style picker — Buzz themes only (Raft / Persona5 / …). */}
-      {shellPickerVisible ? (
-        <ShellStylePickerContent
-          setShellStyle={setShellStyle}
-          shellStyle={shellStyle}
-        />
-      ) : null}
-
-      {/* Accent color picker — hidden for Buzz themes (shell style owns chrome).
+      {/* Accent color picker — hidden for chrome shell themes (own accent).
           Reveal/hide with the translate-up + opacity fade defined by
           ACCENT_PICKER_TRANSITION above. Reduced motion skips the transition
           and just renders/unrenders. */}
@@ -766,67 +800,6 @@ function ThreadLayoutSetting() {
         </DropdownMenu>
       </SettingsOptionRow>
     </SettingsOptionGroup>
-  );
-}
-
-/** Independent theme grid (Raft / Persona5 / multi-palette) — full palettes. */
-function ShellStylePickerContent({
-  shellStyle,
-  setShellStyle,
-}: {
-  shellStyle: ShellStyleId;
-  setShellStyle: (id: ShellStyleId) => void;
-}) {
-  const { t } = useI18n();
-  return (
-    <div className="mb-6 shrink-0 px-1 pb-2 pt-1" data-testid="shell-style-picker">
-      <div className="mb-2">
-        <h3 className="text-sm font-medium text-foreground">
-          {t("appearance.shellStyle.title")}
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          {t("appearance.shellStyle.description")}
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2 p-1">
-        {SHELL_STYLES.map((style) => {
-          const active = shellStyle === style.id;
-          const labelKey =
-            `appearance.shell.${style.id}` as `appearance.shell.${ShellStyleId}`;
-          const blurbKey =
-            `appearance.shell.${style.id}.blurb` as `appearance.shell.${ShellStyleId}.blurb`;
-          return (
-            <button
-              aria-pressed={active}
-              className={cn(
-                "flex min-w-[7.5rem] max-w-[10rem] flex-1 items-center gap-2 rounded-lg border-2 px-2.5 py-2 text-left transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-                active
-                  ? "border-primary bg-primary/15 text-foreground"
-                  : "border-border text-muted-foreground hover:border-foreground/50 hover:text-foreground",
-              )}
-              data-testid={`shell-style-${style.id}`}
-              key={style.id}
-              onClick={() => setShellStyle(style.id)}
-              type="button"
-            >
-              <span
-                aria-hidden="true"
-                className="h-5 w-5 shrink-0 rounded-sm border border-border/60"
-                style={{ backgroundColor: style.swatch }}
-              />
-              <span className="min-w-0">
-                <span className="block truncate text-xs font-semibold text-foreground">
-                  {t(labelKey)}
-                </span>
-                <span className="block truncate text-2xs text-muted-foreground">
-                  {t(blurbKey)}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 

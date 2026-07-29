@@ -597,8 +597,56 @@ export const SHELL_STYLES: ShellStyleDef[] = [
 export const DEFAULT_SHELL_STYLE: ShellStyleId = "raft";
 export const SHELL_STYLE_STORAGE_KEY = "buzz-shell-style";
 
+/**
+ * First-class theme names for multi-palette shells (same level as light/dark).
+ * Raft remains the Buzz / Buzz Dark pair — not listed here.
+ */
+export const INDEPENDENT_SHELL_THEME_NAMES = [
+  "persona5",
+  "persona5max",
+  "brutstack",
+  "limepunch",
+  "coralink",
+  "rosebrick",
+  "tealblock",
+  "violetpaper",
+  "skypost",
+  "inkmono",
+] as const;
+
+export type IndependentShellThemeName =
+  (typeof INDEPENDENT_SHELL_THEME_NAMES)[number];
+
 export function isShellStyleId(value: string): value is ShellStyleId {
   return SHELL_STYLES.some((s) => s.id === value);
+}
+
+export function isIndependentShellThemeName(
+  value: string,
+): value is IndependentShellThemeName {
+  return (INDEPENDENT_SHELL_THEME_NAMES as readonly string[]).includes(value);
+}
+
+/**
+ * Themes that use Buzz chrome CSS (`data-buzz-sidebar`) + full shell palettes.
+ * Includes the Raft pair (buzz / buzz-dark) and every independent shell theme.
+ */
+export function isChromeShellTheme(themeName: string): boolean {
+  return (
+    themeName === "buzz" ||
+    themeName === "buzz-dark" ||
+    isIndependentShellThemeName(themeName)
+  );
+}
+
+/**
+ * Map a stored theme name to its shell palette id.
+ * Independent themes use the shell id as the theme name itself.
+ */
+export function shellIdForThemeName(themeName: string): ShellStyleId | null {
+  if (themeName === "buzz" || themeName === "buzz-dark") return "raft";
+  if (isIndependentShellThemeName(themeName)) return themeName;
+  return null;
 }
 
 export function getShellStyle(id: ShellStyleId): ShellStyleDef {
@@ -624,4 +672,11 @@ export function getShellStyleVars(
   isDark: boolean,
 ): ShellStyleVars {
   return getShellStyle(id).getVars(isDark);
+}
+
+/** Shiki base for an independent shell theme (syntax highlighting only). */
+export function shikiBaseForShellTheme(
+  id: IndependentShellThemeName,
+): "github-light" | "github-dark" {
+  return resolveShellIsDark(id, false) ? "github-dark" : "github-light";
 }

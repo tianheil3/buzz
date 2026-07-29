@@ -19,8 +19,11 @@ import {
   SHELL_STYLE_STORAGE_KEY,
   getShellStyle,
   getShellStyleVars,
+  isChromeShellTheme,
+  isIndependentShellThemeName,
   isShellStyleId,
   resolveShellIsDark,
+  shellIdForThemeName,
 } from "./shell-styles";
 import {
   SYNTAX_THEMES,
@@ -228,14 +231,29 @@ function applyAccentColor(value: string) {
 }
 
 /**
- * The Buzz themes ship with shell-style chrome (Raft amber by default, or
- * Persona5 / other presets). When a Buzz theme is active we force the shell
- * accent rather than the free accent picker; the appearance panel shows a
- * **风格** picker instead. The user's free accent is left in storage for
- * non-Buzz themes.
+ * Chrome themes that own full palettes via shell tokens: the Raft pair
+ * (`buzz` / `buzz-dark`) and every independent shell theme (`persona5`, …).
+ * These pin accent to the theme palette and enable Buzz chrome CSS.
+ *
+ * Kept as `isBuzzTheme` for call-site compatibility; independent shells are
+ * first-class themes, not skins on Buzz Dark.
  */
 export function isBuzzTheme(themeName: string): boolean {
-  return themeName === "buzz" || themeName === "buzz-dark";
+  return isChromeShellTheme(themeName);
+}
+
+/**
+ * Resolve shell palette from the **theme name** (source of truth).
+ * - buzz / buzz-dark → raft
+ * - persona5 / limepunch / … → that shell id
+ *
+ * Legacy `buzz-shell-style` storage is only a migration fallback when the
+ * stored theme is still the Buzz pair with a non-raft skin selection.
+ */
+export function shellIdFromThemeName(themeName: string): ShellStyleId {
+  const fromName = shellIdForThemeName(themeName);
+  if (fromName) return fromName;
+  return DEFAULT_SHELL_STYLE;
 }
 
 export function readStoredShellStyle(): ShellStyleId {
@@ -249,15 +267,40 @@ export function readStoredShellStyle(): ShellStyleId {
 }
 
 /**
- * Resolve the accent to actually apply for a theme: Buzz themes pin the
- * active shell style accent; every other theme uses the stored/selected accent.
+ * Migrate pre-TIA-423 "skin under Buzz" storage: if the user had
+ * buzz-dark + persona5 shell style, promote to independent theme `persona5`.
+ */
+function migrateLegacyShellSkinTheme(
+  storedTheme: SyntaxThemeName,
+): SyntaxThemeName {
+  if (storedTheme !== "buzz" && storedTheme !== "buzz-dark") {
+    return storedTheme;
+  }
+  const legacyShell = readStoredShellStyle();
+  if (legacyShell === "raft") return storedTheme;
+  if (isIndependentShellThemeName(legacyShell)) {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, legacyShell);
+      // Clear legacy skin key so we don't re-apply under Buzz later
+      window.localStorage.setItem(SHELL_STYLE_STORAGE_KEY, legacyShell);
+    } catch {
+      // ignore
+    }
+    return legacyShell;
+  }
+  return storedTheme;
+}
+
+/**
+ * Resolve the accent to actually apply: chrome shell themes pin the theme's
+ * own accent; every other syntax theme uses the free accent picker.
  */
 function resolveEffectiveAccent(
   themeName: string,
   accentColor: string,
-  shellStyle: ShellStyleId = readStoredShellStyle(),
+  shellStyle: ShellStyleId = shellIdFromThemeName(themeName),
 ): string {
-  if (isBuzzTheme(themeName)) {
+  if (isChromeShellTheme(themeName)) {
     return getShellStyle(shellStyle).accentHex || RAFT_ACCENT_HEX;
   }
   return accentColor;
@@ -278,19 +321,17 @@ function applyShellStyleAttr(shellStyle: ShellStyleId) {
  */
 function applyBuzzSidebar(themeName: string) {
   const root = document.documentElement;
-  if (isBuzzTheme(themeName)) {
+  if (isChromeShellTheme(themeName)) {
     root.setAttribute("data-buzz-sidebar", "");
-    // Keep the concrete Buzz variant on the root as well as the generic
-    // marker. The gradient stylesheet matches this attribute directly, which
-    // makes WKWebView invalidate the painted background when light/dark mode
-    // changes instead of relying only on a custom-property dependency update.
+    // Keep a concrete chrome variant on the root. Independent shells use their
+    // own id; the Raft pair keeps buzz / buzz-dark for existing CSS hooks.
     root.setAttribute("data-buzz-theme", themeName);
   } else {
     root.removeAttribute("data-buzz-sidebar");
     root.removeAttribute("data-buzz-theme");
-    // Leaving Buzz: drop translucency synchronously here too. Going *opaque*
-    // never shows desktop/prior content through, so there's no ordering risk
-    // on the way out — only on the way in.
+    // Leaving chrome shell: drop translucency synchronously here too. Going
+    // *opaque* never shows desktop/prior content through, so there's no
+    // ordering risk on the way out — only on the way in.
     setBuzzTranslucent(false);
   }
 }
@@ -356,7 +397,7 @@ let buzzVibrancyEnabled = false;
  */
 function maybeEnableBuzzTranslucent(themeName: string, requestToken: number) {
   if (requestToken !== buzzVibrancyRequest) return;
-  if (!isBuzzTheme(themeName) || !isMacPlatform()) return;
+  if (!isChromeShellTheme(themeName) || !isMacPlatform()) return;
   if (!buzzVibrancyReady) return;
   if (!document.documentElement.hasAttribute("data-buzz-sidebar")) return;
   setBuzzTranslucent(true);
@@ -381,7 +422,7 @@ function maybeEnableBuzzTranslucent(themeName: string, requestToken: number) {
  * continuation can't re-enable translucency after a newer theme superseded it.
  */
 async function applyBuzzVibrancy(themeName: string) {
-  const buzz = isBuzzTheme(themeName);
+  const buzz = isChromeShellTheme(themeName);
   const requestToken = ++buzzVibrancyRequest;
 
   // Buzz Light and Buzz Dark use the same native material. Rebuilding the
@@ -446,10 +487,10 @@ function applyCachedVars(): string | null {
 
     const accent =
       window.localStorage.getItem(ACCENT_STORAGE_KEY) ?? DEFAULT_ACCENT;
-    const shellStyle = readStoredShellStyle();
+    const shellStyle = shellIdFromThemeName(themeName);
     applyShellStyleAttr(shellStyle);
-    // Pin Buzz themes to the shell accent here too, matching applyTheme.
-    // Otherwise a cached Buzz theme + non-neutral stored accent flashes the
+    // Pin chrome shell themes to the theme accent here too, matching applyTheme.
+    // Otherwise a cached chrome theme + non-neutral stored accent flashes the
     // old accent on reload until the async applyTheme effect runs.
     applyAccentColor(resolveEffectiveAccent(themeName, accent, shellStyle));
 
@@ -477,14 +518,13 @@ async function applyTheme(
     modified: info.modified,
   });
 
-  // Buzz themes keep Shiki syntax colors from github-light/dark, but the app
-  // chrome uses the selected independent shell theme (Raft / Persona5 / …).
-  // Overlay after createThemeVars so inline styles do not pin GitHub chrome.
-  // Each shell owns its light/dark class — not a skin painted on Buzz Dark.
-  const shellStyle = readStoredShellStyle();
-  if (isBuzzTheme(name)) {
-    const buzzDark = name === "buzz-dark";
-    isDark = resolveShellIsDark(shellStyle, buzzDark);
+  // Chrome shell themes keep Shiki syntax from github-light/dark, but the app
+  // chrome + content tokens come from the independent shell palette. Theme
+  // name is the source of truth (persona5 ≠ skin on buzz-dark).
+  const shellStyle = shellIdFromThemeName(name);
+  if (isChromeShellTheme(name)) {
+    const pairDark = name === "buzz-dark";
+    isDark = resolveShellIsDark(shellStyle, pairDark);
     vars = { ...vars, ...getShellStyleVars(shellStyle, isDark) };
   }
 
@@ -497,7 +537,7 @@ async function applyTheme(
   root.classList.add(isDark ? "dark" : "light");
   applyShellStyleAttr(shellStyle);
   applyBuzzSidebar(name);
-  // The Buzz gradient vars are now installed. If the vibrancy layer already
+  // The chrome gradient vars are now installed. If the vibrancy layer already
   // resolved for the current request (the IPC won the race against this theme
   // load), enable translucency now — otherwise applyBuzzVibrancy does it. This
   // is the second half of the two-effect handshake; the token guards against a
@@ -507,8 +547,8 @@ async function applyTheme(
   // Apply the accent synchronously in the same batch as the theme vars so the
   // browser paints the new theme + accent together. Doing this in a later
   // microtask (e.g. the caller's `.then`) let the previous accent flash on the
-  // new theme for a frame — the flicker seen when switching to Buzz. Buzz
-  // themes resolve to the active shell style accent.
+  // new theme for a frame — the flicker seen when switching to Buzz. Chrome
+  // shell themes resolve to their own palette accent.
   applyAccentColor(
     resolveEffectiveAccent(
       name,
@@ -537,7 +577,8 @@ export function ThemeProvider({
   // Apply cached vars synchronously before first render
   const [selectedTheme, setSelectedTheme] = useState<string>(() => {
     applyCachedVars();
-    return readStoredTheme(defaultTheme);
+    const stored = readStoredTheme(defaultTheme);
+    return migrateLegacyShellSkinTheme(stored);
   });
   const [isDark, setIsDark] = useState<boolean>(() => {
     return document.documentElement.classList.contains("dark");
@@ -547,9 +588,8 @@ export function ThemeProvider({
   const [accentColor, setAccentColorState] = useState<string>(() => {
     return window.localStorage.getItem(ACCENT_STORAGE_KEY) ?? DEFAULT_ACCENT;
   });
-  const [shellStyle, setShellStyleState] = useState<ShellStyleId>(() => {
-    return readStoredShellStyle();
-  });
+  // Derived from theme name (independent themes) — not a free skin switch.
+  const shellStyle = shellIdFromThemeName(selectedTheme);
   const [followSystem, setFollowSystemState] = useState<boolean>(() => {
     const stored = window.localStorage.getItem(FOLLOW_SYSTEM_KEY);
     if (stored !== null) return stored === "true";
@@ -640,17 +680,18 @@ export function ThemeProvider({
     };
   }, [followSystem]);
 
-  // Re-apply chrome when accent, shell style, or effective theme changes.
+  // Re-apply chrome when accent or effective theme changes.
   // applyTheme already batches shell vars + accent on theme load; this covers
-  // shell/accent-only changes without a full Shiki reload when possible.
+  // accent-only changes without a full Shiki reload when possible.
   useEffect(() => {
-    applyShellStyleAttr(shellStyle);
-    if (isBuzzTheme(effectiveTheme)) {
+    const shell = shellIdFromThemeName(effectiveTheme);
+    applyShellStyleAttr(shell);
+    if (isChromeShellTheme(effectiveTheme)) {
       const dark = resolveShellIsDark(
-        shellStyle,
+        shell,
         effectiveTheme === "buzz-dark",
       );
-      const shellVars = getShellStyleVars(shellStyle, dark);
+      const shellVars = getShellStyleVars(shell, dark);
       const root = document.documentElement;
       for (const [key, value] of Object.entries(shellVars)) {
         root.style.setProperty(key, value);
@@ -658,7 +699,7 @@ export function ThemeProvider({
       root.classList.remove("light", "dark");
       root.classList.add(dark ? "dark" : "light");
       setIsDark(dark);
-      // Keep FOUC cache in sync so refresh retains the selected shell chrome.
+      // Keep FOUC cache in sync so refresh retains the selected chrome theme.
       try {
         const cachedRaw = window.localStorage.getItem(CACHE_KEY);
         const cached = cachedRaw ? JSON.parse(cachedRaw) : null;
@@ -683,14 +724,21 @@ export function ThemeProvider({
       }
     }
     applyAccentColor(
-      resolveEffectiveAccent(effectiveTheme, accentColor, shellStyle),
+      resolveEffectiveAccent(effectiveTheme, accentColor, shell),
     );
-  }, [accentColor, effectiveTheme, shellStyle]);
+  }, [accentColor, effectiveTheme]);
 
   const setTheme = useCallback((name: string) => {
     if (!isValidThemeName(name)) return;
     setSelectedTheme(name);
     window.localStorage.setItem(THEME_STORAGE_KEY, name);
+    // Keep legacy shell key aligned for any residual readers / FOUC paths.
+    const shell = shellIdFromThemeName(name);
+    try {
+      window.localStorage.setItem(SHELL_STYLE_STORAGE_KEY, shell);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const setAccentColor = useCallback((color: string) => {
@@ -698,10 +746,29 @@ export function ThemeProvider({
     setAccentColorState(color);
   }, []);
 
+  /**
+   * Select an independent shell theme (or raft via buzz pair).
+   * Promotes the shell to a first-class theme name — not a skin under dark.
+   */
   const setShellStyle = useCallback((id: ShellStyleId) => {
     if (!isShellStyleId(id)) return;
-    window.localStorage.setItem(SHELL_STYLE_STORAGE_KEY, id);
-    setShellStyleState(id);
+    if (id === "raft") {
+      // Keep current light/dark pair member for Raft.
+      const next =
+        document.documentElement.classList.contains("dark")
+          ? "buzz-dark"
+          : "buzz";
+      setSelectedTheme(next);
+      window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    } else {
+      setSelectedTheme(id);
+      window.localStorage.setItem(THEME_STORAGE_KEY, id);
+    }
+    try {
+      window.localStorage.setItem(SHELL_STYLE_STORAGE_KEY, id);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const setFollowSystem = useCallback((enabled: boolean) => {

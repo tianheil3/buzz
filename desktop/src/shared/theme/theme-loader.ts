@@ -6,6 +6,11 @@
  */
 
 import type { ThemeRegistrationRaw } from "shiki";
+import {
+  INDEPENDENT_SHELL_THEME_NAMES,
+  isIndependentShellThemeName,
+  shikiBaseForShellTheme,
+} from "./shell-styles";
 
 /**
  * Buzz theme name. Buzz is a first-party light theme that reuses GitHub
@@ -15,6 +20,10 @@ import type { ThemeRegistrationRaw } from "shiki";
  * sidebar/nav canvas, replacing GitHub Light's flat grey. The gradient is
  * applied by {@link ThemeProvider} toggling a `data-buzz-sidebar` attribute
  * on the document root; the CSS lives in `shared/styles/globals/theme.css`.
+ *
+ * Raft (cream + amber) is the default chrome palette for Buzz / Buzz Dark.
+ * Other multi-palette shells (Persona5, Brutstack, …) are **independent
+ * theme names** in {@link SYNTAX_THEMES}, not skins on Buzz Dark.
  */
 export const BUZZ_THEME_NAME = "buzz";
 
@@ -41,25 +50,27 @@ export const BUZZ_DARK_BASE_THEME: SyntaxThemeName = "github-dark";
  * Resolve a theme name to the real Shiki bundled theme it maps to.
  *
  * Most themes map to themselves, but the Buzz aliases (`buzz` / `buzz-dark`)
- * are not bundled Shiki themes — they reuse the GitHub Light / GitHub Dark
- * palettes. The Shiki highlighter engine (used for fenced code blocks in
- * `CodeBlock.tsx`) only understands bundled names, so callers that hand a
- * theme name to `loadTheme` / `codeToTokens` must resolve it through here
- * first; passing a raw Buzz alias makes Shiki throw and code blocks fall
- * back to unhighlighted plain text.
+ * and independent shell themes (Persona5, LimePunch, …) are not bundled Shiki
+ * themes — they reuse GitHub Light / Dark for syntax only. Callers that hand a
+ * theme name to `loadTheme` / `codeToTokens` must resolve it through here first.
  */
 export function resolveShikiThemeName(name: string): SyntaxThemeName {
   if (name === BUZZ_THEME_NAME) return BUZZ_BASE_THEME;
   if (name === BUZZ_DARK_THEME_NAME) return BUZZ_DARK_BASE_THEME;
+  if (isIndependentShellThemeName(name)) {
+    return shikiBaseForShellTheme(name);
+  }
   return name as SyntaxThemeName;
 }
 
-// Available themes. "buzz" is a Buzz-branded theme that reuses the
-// github-light palette plus a sidebar gradient; the rest are the Shiki
-// bundled syntax themes, alphabetically sorted.
+// Available themes. "buzz" is Raft chrome + github-light; independent shell
+// themes (persona5, brutstack, …) are first-class entries at the same level
+// as other light/dark themes. Remaining names are Shiki bundled themes.
 export const SYNTAX_THEMES = [
   "buzz",
   "buzz-dark",
+  // Independent shell themes (full palettes — not skins on Buzz Dark)
+  ...INDEPENDENT_SHELL_THEME_NAMES,
   "andromeeda",
   "aurora-x",
   "ayu-dark",
@@ -125,9 +136,18 @@ export const SYNTAX_THEMES = [
 export type SyntaxThemeName = (typeof SYNTAX_THEMES)[number];
 
 // Known light themes — used by the theme picker to show sun/moon icons
-// for themes that haven't been loaded yet.
+// for themes that haven't been loaded yet. Independent light shells listed
+// here so System/Light mode categorize them correctly.
 export const LIGHT_THEMES: ReadonlySet<SyntaxThemeName> = new Set([
   "buzz",
+  "brutstack",
+  "limepunch",
+  "coralink",
+  "rosebrick",
+  "tealblock",
+  "violetpaper",
+  "skypost",
+  "inkmono",
   "catppuccin-latte",
   "everforest-light",
   "github-light",
@@ -157,6 +177,18 @@ const themeImports: Record<
   buzz: () => import("shiki/themes/github-light.mjs"),
   // Buzz Dark reuses the github-dark palette; dark gradient applied separately.
   "buzz-dark": () => import("shiki/themes/github-dark.mjs"),
+  // Independent shell themes — syntax from github-light/dark; chrome tokens
+  // come from shell-styles via ThemeProvider (full palettes, not skins).
+  persona5: () => import("shiki/themes/github-dark.mjs"),
+  persona5max: () => import("shiki/themes/github-dark.mjs"),
+  brutstack: () => import("shiki/themes/github-light.mjs"),
+  limepunch: () => import("shiki/themes/github-light.mjs"),
+  coralink: () => import("shiki/themes/github-light.mjs"),
+  rosebrick: () => import("shiki/themes/github-light.mjs"),
+  tealblock: () => import("shiki/themes/github-light.mjs"),
+  violetpaper: () => import("shiki/themes/github-light.mjs"),
+  skypost: () => import("shiki/themes/github-light.mjs"),
+  inkmono: () => import("shiki/themes/github-light.mjs"),
   andromeeda: () => import("shiki/themes/andromeeda.mjs"),
   "aurora-x": () => import("shiki/themes/aurora-x.mjs"),
   "ayu-dark": () => import("shiki/themes/ayu-dark.mjs"),

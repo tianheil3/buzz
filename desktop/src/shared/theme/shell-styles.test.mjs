@@ -3,12 +3,16 @@ import { describe, it } from "node:test";
 
 import {
   DEFAULT_SHELL_STYLE,
+  INDEPENDENT_SHELL_THEME_NAMES,
   SHELL_STYLES,
   SHELL_STYLE_STORAGE_KEY,
   getShellStyle,
   getShellStyleVars,
+  isChromeShellTheme,
+  isIndependentShellThemeName,
   isShellStyleId,
   resolveShellIsDark,
+  shellIdForThemeName,
   shellSidebarReadable,
   hslContrastRatio,
 } from "./shell-styles.ts";
@@ -70,6 +74,23 @@ describe("shell styles catalog", () => {
     // Raft pairs with Buzz light/dark
     assert.equal(resolveShellIsDark("raft", true), true);
     assert.equal(resolveShellIsDark("raft", false), false);
+  });
+
+  it("independent shells are first-class theme names, not dark skins", () => {
+    assert.ok(INDEPENDENT_SHELL_THEME_NAMES.includes("persona5"));
+    assert.ok(INDEPENDENT_SHELL_THEME_NAMES.includes("persona5max"));
+    assert.ok(INDEPENDENT_SHELL_THEME_NAMES.includes("limepunch"));
+    assert.equal(isIndependentShellThemeName("persona5"), true);
+    assert.equal(isIndependentShellThemeName("buzz-dark"), false);
+    assert.equal(isIndependentShellThemeName("raft"), false);
+    // Theme name maps to shell id 1:1 for independents
+    assert.equal(shellIdForThemeName("persona5"), "persona5");
+    assert.equal(shellIdForThemeName("limepunch"), "limepunch");
+    assert.equal(shellIdForThemeName("buzz"), "raft");
+    assert.equal(shellIdForThemeName("buzz-dark"), "raft");
+    assert.equal(isChromeShellTheme("persona5"), true);
+    assert.equal(isChromeShellTheme("buzz"), true);
+    assert.equal(isChromeShellTheme("github-dark"), false);
   });
 
   it("every shell has readable sidebar contrast (≥ 4.5:1)", () => {

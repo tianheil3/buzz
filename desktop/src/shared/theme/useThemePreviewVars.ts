@@ -15,6 +15,11 @@ import {
 import { NEUTRAL_ACCENT } from "./ThemeProvider";
 import { hexToHsl } from "./adaptive-theme";
 import { getRaftShellVars } from "./raft-shell";
+import {
+  getShellStyleVars,
+  isIndependentShellThemeName,
+  shellIdForThemeName,
+} from "./shell-styles";
 
 export type ThemePreviewVarsByTheme = Partial<
   Record<SyntaxThemeName, ThemePreviewVars>
@@ -33,6 +38,14 @@ async function loadThemePreviewVars(name: SyntaxThemeName) {
   });
   if (name === "buzz" || name === "buzz-dark") {
     vars = { ...vars, ...getRaftShellVars(name === "buzz-dark") };
+  } else if (isIndependentShellThemeName(name)) {
+    const shell = shellIdForThemeName(name);
+    if (shell) {
+      vars = {
+        ...vars,
+        ...getShellStyleVars(shell, !isLightTheme(name)),
+      };
+    }
   }
   return [name, vars] as const;
 }
@@ -92,6 +105,9 @@ export function useThemePreviewVars() {
 export function getThemeFallbackPreviewVars(name: SyntaxThemeName) {
   if (name === "buzz" || name === "buzz-dark") {
     return getRaftShellVars(name === "buzz-dark");
+  }
+  if (isIndependentShellThemeName(name)) {
+    return getShellStyleVars(name, !isLightTheme(name));
   }
   return isLightTheme(name) ? LIGHT_PREVIEW_VARS : DARK_PREVIEW_VARS;
 }
