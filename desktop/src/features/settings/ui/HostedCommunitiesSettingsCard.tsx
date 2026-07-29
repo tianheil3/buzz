@@ -52,6 +52,7 @@ import {
   DialogTitle,
 } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
+import { useI18n } from "@/shared/i18n";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
 
 function relayHost(url: string | null | undefined) {
@@ -64,6 +65,7 @@ function relayHost(url: string | null | undefined) {
 }
 
 export function HostedCommunitiesSettingsCard() {
+  const { t } = useI18n();
   const onboarding = useCommunityOnboarding();
   const { activeCommunity } = useCommunities();
   const localPubkey = useIdentityQuery().data?.pubkey ?? null;
@@ -417,8 +419,8 @@ export function HostedCommunitiesSettingsCard() {
   return (
     <section className="space-y-6" data-testid="hosted-communities-settings">
       <SettingsSectionHeader
-        title="Hosted communities"
-        description="Buzz works with any relay. This page is only for relay hosting provided by Block — sign in with a Builderlab account to create and manage Block-hosted communities. Builderlab sign-in is used on this page alone."
+        title={t("settings.hostedCommunities.title")}
+        description={t("settings.hostedCommunities.description")}
       />
 
       {error ? (

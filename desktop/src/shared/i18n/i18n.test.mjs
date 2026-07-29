@@ -42,6 +42,17 @@ describe("desktop i18n", () => {
     );
   });
 
+  it("translates settings panel titles (not only nav)", () => {
+    assert.equal(translate("settings.profile.title", "zh"), "个人资料");
+    assert.equal(translate("settings.profile.title", "en"), "Profile");
+    assert.equal(translate("settings.notifications.title", "zh"), "通知");
+    assert.equal(translate("appearance.shellStyle.title", "zh"), "主题风格");
+    assert.equal(translate("appearance.threadLayout.focus", "zh"), "专注");
+    assert.equal(translate("appearance.shell.persona5max", "en"), "Persona 5 Max");
+    assert.equal(translate("appearance.accent.title", "zh"), "强调色");
+    assert.equal(translate("settings.agents.title", "zh"), "智能体");
+  });
+
   it("falls back to English for missing zh (defensive)", () => {
     assert.equal(translate("common.save", "en"), "Save");
     assert.equal(translate("common.save", "zh"), "保存");

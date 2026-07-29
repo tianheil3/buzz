@@ -20,6 +20,7 @@ import {
   ProfileAvatarEditor,
   parseEmojiAvatarDataUrl,
 } from "@/features/profile/ui/ProfileAvatarEditor";
+import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { Input } from "@/shared/ui/input";
 import { Spinner } from "@/shared/ui/spinner";
@@ -218,6 +219,7 @@ export function ProfileSettingsCard({
   currentPubkey,
   fallbackDisplayName,
 }: ProfileSettingsCardProps) {
+  const { t } = useI18n();
   const shouldReduceMotion = useReducedMotion();
   const profileQuery = useProfileQuery();
   const updateProfileMutation = useUpdateProfileMutation();
@@ -485,13 +487,14 @@ export function ProfileSettingsCard({
     setDisplayNameDraft(updatePayload.displayName ?? currentDisplayName);
     setAvatarUrlDraft(updatePayload.avatarUrl ?? currentAvatarUrl);
     setAboutDraft(updatePayload.about ?? currentAbout);
-    toast.success("Profile saved");
+    toast.success(t("settings.profile.saved"));
     return true;
   }, [
     canSave,
     currentAbout,
     currentAvatarUrl,
     currentDisplayName,
+    t,
     updatePayload,
     updateProfileMutation,
   ]);
@@ -568,8 +571,8 @@ export function ProfileSettingsCard({
     >
       <div>
         <SettingsSectionHeader
-          title="Profile"
-          description="Update how your name, avatar, and bio appear across Buzz."
+          title={t("settings.profile.title")}
+          description={t("settings.profile.description")}
         />
 
         <div className="space-y-3">
@@ -779,7 +782,7 @@ export function ProfileSettingsCard({
                                 className="block text-sm font-medium"
                                 htmlFor="profile-display-name"
                               >
-                                Display name
+                                {t("settings.profile.displayName")}
                               </label>
                               {isEditingProfileMetadata ? (
                                 <Input
@@ -790,7 +793,7 @@ export function ProfileSettingsCard({
                                   onChange={(event) =>
                                     setDisplayNameDraft(event.target.value)
                                   }
-                                  placeholder="Display name"
+                                  placeholder={t("settings.profile.displayName")}
                                   ref={displayNameInputRef}
                                   value={displayNameDraft}
                                 />
@@ -798,9 +801,13 @@ export function ProfileSettingsCard({
                                 <p
                                   className="min-w-0 truncate text-sm text-muted-foreground"
                                   data-testid="profile-display-name-value"
-                                  title={displayNameDraft || "Not set"}
+                                  title={
+                                    displayNameDraft ||
+                                    t("settings.profile.notSet")
+                                  }
                                 >
-                                  {displayNameDraft || "Not set"}
+                                  {displayNameDraft ||
+                                    t("settings.profile.notSet")}
                                 </p>
                               )}
                             </div>
@@ -812,7 +819,7 @@ export function ProfileSettingsCard({
                                 className="block text-sm font-medium"
                                 htmlFor="profile-about"
                               >
-                                Profile description
+                                {t("settings.profile.about")}
                               </label>
                               {isEditingProfileMetadata ? (
                                 <Textarea
@@ -823,7 +830,7 @@ export function ProfileSettingsCard({
                                   onChange={(event) =>
                                     setAboutDraft(event.target.value)
                                   }
-                                  placeholder="Profile description"
+                                  placeholder={t("settings.profile.about")}
                                   ref={aboutTextareaRef}
                                   value={aboutDraft}
                                 />
@@ -836,9 +843,11 @@ export function ProfileSettingsCard({
                                       : "text-muted-foreground/55",
                                   )}
                                   data-testid="profile-about-value"
-                                  title={aboutDraft || "Not set"}
+                                  title={
+                                    aboutDraft || t("settings.profile.notSet")
+                                  }
                                 >
-                                  {aboutDraft || "Not set"}
+                                  {aboutDraft || t("settings.profile.notSet")}
                                 </p>
                               )}
                             </div>

@@ -34,6 +34,7 @@ import type {
   UpdateChannelTemplateInput,
 } from "@/shared/api/types";
 import { cn } from "@/shared/lib/cn";
+import { useI18n } from "@/shared/i18n";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
 import {
   AlertDialog,
@@ -59,6 +60,7 @@ import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 
 export function ChannelTemplatesSettingsCard() {
+  const { t } = useI18n();
   const templatesQuery = useChannelTemplatesQuery();
   const deleteMutation = useDeleteChannelTemplateMutation();
   const duplicateMutation = useDuplicateChannelTemplateMutation();
@@ -102,13 +104,8 @@ export function ChannelTemplatesSettingsCard() {
   return (
     <section className="min-w-0" data-testid="settings-channel-templates">
       <SettingsSectionHeader
-        title="Channel templates"
-        description={
-          <>
-            Save reusable channel configurations and apply them when creating
-            new channels.
-          </>
-        }
+        title={t("settings.channelTemplates.title")}
+        description={t("settings.channelTemplates.description")}
         action={
           <Button
             onClick={() => setIsCreateOpen(true)}

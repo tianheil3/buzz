@@ -1,6 +1,7 @@
 import { setAgentManagedProfiles } from "@/shared/api/tauri";
 import { desktopFeatures, useFeatureToggle } from "@/shared/features";
 import type { FeatureDefinition } from "@/shared/features";
+import { useI18n } from "@/shared/i18n";
 import { Switch } from "@/shared/ui/switch";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
 
@@ -37,6 +38,7 @@ function FeatureRow({ feature }: { feature: FeatureDefinition }) {
 }
 
 export function ExperimentalFeaturesCard() {
+  const { t } = useI18n();
   // Manifest is preview-only by definition; every desktop entry is a preview
   // feature.
   const previewFeatures = desktopFeatures;
@@ -44,13 +46,8 @@ export function ExperimentalFeaturesCard() {
   return (
     <section className="min-w-0" data-testid="settings-experimental">
       <SettingsSectionHeader
-        title="Experiments"
-        description={
-          <>
-            These features are functional but still being refined. Enable them
-            to try new capabilities early.
-          </>
-        }
+        title={t("settings.experiments.title")}
+        description={t("settings.experiments.description")}
       />
 
       <div className="flex flex-col gap-2">

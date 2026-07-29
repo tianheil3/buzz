@@ -689,40 +689,40 @@ function ThemeSettingsCard() {
   );
 }
 
-const THREAD_VIEW_MODE_OPTIONS: {
-  value: ThreadViewMode;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: "focus",
-    label: "Focus",
-    description: "Threads open over the channel, full width",
-  },
-  {
-    value: "split",
-    label: "Split",
-    description: "Threads open in a side panel next to the channel",
-  },
-];
-
 /**
  * Thread layout picker. Uses the same dropdown radio group vocabulary as the
  * other enumerated Settings rows (e.g. {@link SoundPicker}) so each option can
  * carry its own description.
  */
 function ThreadLayoutSetting() {
+  const { t } = useI18n();
   const threadViewMode = useThreadViewMode();
+  const options: {
+    value: ThreadViewMode;
+    label: string;
+    description: string;
+  }[] = [
+    {
+      value: "focus",
+      label: t("appearance.threadLayout.focus"),
+      description: t("appearance.threadLayout.focusDescription"),
+    },
+    {
+      value: "split",
+      label: t("appearance.threadLayout.split"),
+      description: t("appearance.threadLayout.splitDescription"),
+    },
+  ];
   const activeOption =
-    THREAD_VIEW_MODE_OPTIONS.find(
-      (option) => option.value === threadViewMode,
-    ) ?? THREAD_VIEW_MODE_OPTIONS[0];
+    options.find((option) => option.value === threadViewMode) ?? options[0];
 
   return (
     <SettingsOptionGroup className="mt-8">
       <SettingsOptionRow>
         <div className="min-w-0">
-          <p className="text-sm font-medium">Thread layout</p>
+          <p className="text-sm font-medium">
+            {t("appearance.threadLayout.title")}
+          </p>
           <p className="text-sm font-normal text-muted-foreground">
             {activeOption.description}
           </p>
@@ -747,7 +747,7 @@ function ThreadLayoutSetting() {
               }
               value={threadViewMode}
             >
-              {THREAD_VIEW_MODE_OPTIONS.map((option) => (
+              {options.map((option) => (
                 <DropdownMenuRadioItem
                   data-testid={`thread-layout-${option.value}`}
                   key={option.value}
@@ -769,7 +769,7 @@ function ThreadLayoutSetting() {
   );
 }
 
-/** Shell style grid for Buzz chrome (Raft / Persona5 / multi-palette). */
+/** Independent theme grid (Raft / Persona5 / multi-palette) — full palettes. */
 function ShellStylePickerContent({
   shellStyle,
   setShellStyle,
@@ -791,6 +791,10 @@ function ShellStylePickerContent({
       <div className="flex flex-wrap gap-2 p-1">
         {SHELL_STYLES.map((style) => {
           const active = shellStyle === style.id;
+          const labelKey =
+            `appearance.shell.${style.id}` as `appearance.shell.${ShellStyleId}`;
+          const blurbKey =
+            `appearance.shell.${style.id}.blurb` as `appearance.shell.${ShellStyleId}.blurb`;
           return (
             <button
               aria-pressed={active}
@@ -812,10 +816,10 @@ function ShellStylePickerContent({
               />
               <span className="min-w-0">
                 <span className="block truncate text-xs font-semibold text-foreground">
-                  {style.label}
+                  {t(labelKey)}
                 </span>
                 <span className="block truncate text-2xs text-muted-foreground">
-                  {style.blurb}
+                  {t(blurbKey)}
                 </span>
               </span>
             </button>
@@ -836,9 +840,10 @@ function AccentPickerContent({
   isDark: boolean;
   setAccentColor: (value: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="shrink-0 px-1 pb-2 pt-1">
-      <h3 className="mb-2 text-sm font-medium">Accent color</h3>
+      <h3 className="mb-2 text-sm font-medium">{t("appearance.accent.title")}</h3>
       <div className="flex flex-wrap gap-2 p-1">
         {ACCENT_COLORS.map((color) => {
           const isNeutral = color.value === NEUTRAL_ACCENT;

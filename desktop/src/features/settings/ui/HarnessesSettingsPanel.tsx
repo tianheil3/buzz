@@ -7,6 +7,7 @@ import {
   useGitBashPrerequisiteQuery,
 } from "@/features/agents/hooks";
 import type { AcpRuntimeCatalogEntry } from "@/shared/api/types";
+import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { SectionHeader } from "@/shared/ui/PageHeader";
@@ -84,6 +85,7 @@ function GitBashCard({
  *   needs multi-step setup, plus the custom-harness form.
  */
 export function HarnessesSettingsPanel() {
+  const { t } = useI18n();
   const runtimesQuery = useAcpRuntimesQuery();
   const gitBashQuery = useGitBashPrerequisiteQuery();
   const [catalogOpen, setCatalogOpen] = React.useState(false);
@@ -113,8 +115,8 @@ export function HarnessesSettingsPanel() {
     <section className="min-w-0 space-y-4" data-testid="settings-harnesses">
       <SectionHeader
         className="items-center"
-        title="Agent runtimes"
-        description="Choose which agent tools Buzz can use on this device."
+        title={t("settings.agentRuntimes.title")}
+        description={t("settings.agentRuntimes.description")}
         action={
           <Button
             disabled={isRefreshing}

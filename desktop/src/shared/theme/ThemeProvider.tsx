@@ -20,6 +20,7 @@ import {
   getShellStyle,
   getShellStyleVars,
   isShellStyleId,
+  resolveShellIsDark,
 } from "./shell-styles";
 import {
   SYNTAX_THEMES,
@@ -477,12 +478,13 @@ async function applyTheme(
   });
 
   // Buzz themes keep Shiki syntax colors from github-light/dark, but the app
-  // chrome uses the selected shell style (Raft / Persona5 / …). Overlay after
-  // createThemeVars so inline styles do not pin the old GitHub-derived chrome.
+  // chrome uses the selected independent shell theme (Raft / Persona5 / …).
+  // Overlay after createThemeVars so inline styles do not pin GitHub chrome.
+  // Each shell owns its light/dark class — not a skin painted on Buzz Dark.
   const shellStyle = readStoredShellStyle();
   if (isBuzzTheme(name)) {
-    const shell = getShellStyle(shellStyle);
-    isDark = shell.forceDark ? true : name === "buzz-dark";
+    const buzzDark = name === "buzz-dark";
+    isDark = resolveShellIsDark(shellStyle, buzzDark);
     vars = { ...vars, ...getShellStyleVars(shellStyle, isDark) };
   }
 
@@ -644,8 +646,10 @@ export function ThemeProvider({
   useEffect(() => {
     applyShellStyleAttr(shellStyle);
     if (isBuzzTheme(effectiveTheme)) {
-      const shell = getShellStyle(shellStyle);
-      const dark = shell.forceDark ? true : effectiveTheme === "buzz-dark";
+      const dark = resolveShellIsDark(
+        shellStyle,
+        effectiveTheme === "buzz-dark",
+      );
       const shellVars = getShellStyleVars(shellStyle, dark);
       const root = document.documentElement;
       for (const [key, value] of Object.entries(shellVars)) {

@@ -14,6 +14,7 @@ import {
   type SoundName,
   type SoundSlot,
 } from "@/features/notifications/lib/sound";
+import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { Switch } from "@/shared/ui/switch";
@@ -44,6 +45,7 @@ export function NotificationSettingsCard({
   onSetNotifyWhileViewing: (enabled: boolean) => void;
   onSetSoundForSlot: (slot: SoundSlot, name: SoundName) => void;
 }) {
+  const { t } = useI18n();
   const permissionBlocked =
     notificationPermission === "denied" ||
     notificationPermission === "unsupported";
@@ -62,8 +64,8 @@ export function NotificationSettingsCard({
   return (
     <section className="min-w-0" data-testid="settings-notifications">
       <SettingsSectionHeader
-        title="Notifications"
-        description="Desktop alerts are on by default. Fine-tune what gets through below."
+        title={t("settings.notifications.title")}
+        description={t("settings.notifications.description")}
       />
 
       <span className="sr-only" data-testid="notifications-desktop-state">

@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { useI18n } from "@/shared/i18n";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
 
 // The queue is mod-only: only relay owners/admins may read /moderation/* (the
@@ -541,6 +542,7 @@ function AuditTab() {
 }
 
 export function ModerationQueueCard() {
+  const { t } = useI18n();
   const membershipQuery = useMyRelayMembershipQuery();
   const role = membershipQuery.data?.role;
   const isModerator = role === "owner" || role === "admin";
@@ -551,8 +553,8 @@ export function ModerationQueueCard() {
       data-testid="settings-moderation"
     >
       <SettingsSectionHeader
-        title="Moderation"
-        description="Review reported content and take action. Visible to community moderators only."
+        title={t("settings.moderation.title")}
+        description={t("settings.moderation.description")}
       />
 
       {!isModerator ? (

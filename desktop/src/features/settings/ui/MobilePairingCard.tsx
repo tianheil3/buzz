@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/ui/dialog";
+import { useI18n } from "@/shared/i18n";
 import { SettingsOptionGroup, SettingsOptionRow } from "./SettingsOptionGroup";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
 import { writeTextToClipboard } from "@/shared/lib/clipboard";
@@ -174,6 +175,7 @@ export function MobilePairingCard({
 }: {
   currentPubkey?: string;
 }) {
+  const { t } = useI18n();
   const [step, setStep] = useState<PairingStep>("idle");
   const [qrUri, setQrUri] = useState<string | null>(null);
   const [sasCode, setSasCode] = useState<string | null>(null);
@@ -330,14 +332,8 @@ export function MobilePairingCard({
   return (
     <section className="min-w-0" data-testid="settings-mobile">
       <SettingsSectionHeader
-        title="Mobile"
-        description={
-          <>
-            Connect the Buzz mobile app to this relay by scanning a QR code. The
-            connection is secured with end-to-end encryption and a verification
-            code.
-          </>
-        }
+        title={t("settings.mobile.title")}
+        description={t("settings.mobile.description")}
       />
 
       <SettingsOptionGroup

@@ -811,16 +811,88 @@
 
 /*
  * ---------------------------------------------------------------------------
- * Raft / BC home_portal readability fix (Owner 2026-07-29)
+ * Independent shell themes (Owner 2026-07-29 TIA-423)
  *
- * Problem: light Buzz mode painted cream gradient under the whole shell while
- * --sidebar-foreground stayed near-white → left menu text unreadable.
+ * Shell styles are FULL palettes (not skins on Buzz Dark). ThemeProvider sets
+ * `data-shell-style` + complete CSS vars including --buzz-* chrome tokens.
  *
- * Fix: force solid charcoal sidebar + high-contrast light labels (home_portal
- * side/side-text), keep cream paper for main content only.
+ * Gate: every theme must keep left-nav text readable. Solid rail (no cream
+ * gradient bleed) + sidebar-foreground for all menu rows.
  * ---------------------------------------------------------------------------
  */
-:root[data-buzz-sidebar]:not(.dark) {
+
+/* Solid rail for every Buzz shell — sidebar tokens own fill + text. */
+:root[data-buzz-sidebar] [data-testid="app-sidebar"],
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"],
+:root[data-buzz-sidebar] [data-sidebar="sidebar"],
+:root[data-buzz-sidebar] [data-sidebar="sidebar"][data-mobile="true"].bg-sidebar {
+  background-color: hsl(var(--sidebar-background));
+  background-image: none;
+  color: hsl(var(--sidebar-foreground));
+}
+
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] .bg-sidebar,
+:root[data-buzz-sidebar] [data-testid="community-rail"],
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] > div.bg-sidebar,
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] .bg-sidebar {
+  background-color: hsl(var(--sidebar-background));
+  background-image: none;
+  color: hsl(var(--sidebar-foreground));
+}
+
+/* Readable nav rows: use shell sidebar-foreground, not gradient-era black/40% */
+:root[data-buzz-sidebar] [data-testid="app-sidebar"],
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] [data-sidebar="menu-button"],
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] [data-sidebar="group-label"],
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] [data-sidebar="menu-sub-button"],
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] [data-sidebar="menu-button"],
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] [data-sidebar="group-label"],
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] [data-sidebar="menu-sub-button"] {
+  color: hsl(var(--sidebar-foreground));
+  font-weight: 600;
+}
+
+/* Opacity utility variants that otherwise wash out on dark rails */
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] .text-sidebar-foreground\/70,
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] .text-sidebar-foreground\/80,
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] .text-sidebar-foreground\/70,
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] .text-sidebar-foreground\/80 {
+  color: color-mix(
+    in srgb,
+    hsl(var(--sidebar-foreground)) 88%,
+    transparent
+  ) !important;
+}
+
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] .text-sidebar-foreground\/50,
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] .text-sidebar-foreground\/60,
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] .text-sidebar-foreground\/50,
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] .text-sidebar-foreground\/60 {
+  color: color-mix(
+    in srgb,
+    hsl(var(--sidebar-foreground)) 75%,
+    transparent
+  ) !important;
+}
+
+/*
+ * Active nav pill: prefer shell primary tokens. The generic Buzz active override
+ * above uses --buzz-active-*; shell styles pin those in JS vars.
+ */
+:root[data-buzz-sidebar] [data-testid="app-sidebar"] [data-active="true"],
+:root[data-buzz-sidebar] [data-testid="settings-sidebar"] [data-active="true"] {
+  background-color: var(--buzz-active-surface, hsl(var(--sidebar-active) / 0.28));
+  color: hsl(var(--sidebar-active-foreground));
+  box-shadow: none;
+}
+
+/* Raft light: charcoal rail + amber (home_portal) — scoped, not global */
+:root[data-buzz-sidebar][data-shell-style="raft"]:not(.dark) {
   --sidebar: 24 10% 16%;
   --sidebar-background: 24 10% 16%;
   --sidebar-foreground: 40 33% 98%;
@@ -832,7 +904,6 @@
   --sidebar-accent-foreground: 40 33% 98%;
   --sidebar-border: 24 6% 28%;
   --sidebar-ring: 43 96% 56%;
-  /* Chrome labels on dark rail (was black/40% on cream) */
   --buzz-muted-foreground: rgb(250 250 249 / 78%);
   --buzz-chrome-foreground: rgb(250 250 249 / 90%);
   --buzz-nav-fg: rgb(250 250 249 / 92%);
@@ -846,81 +917,19 @@
   --buzz-active-foreground: 24 10% 10%;
 }
 
-/* Solid dark rail — do not show cream gradient through sidebar chrome */
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"],
-:root[data-buzz-sidebar]:not(.dark) [data-sidebar="sidebar"],
-:root[data-buzz-sidebar]:not(.dark) [data-sidebar="sidebar"][data-mobile="true"].bg-sidebar {
-  background-color: hsl(var(--sidebar-background));
-  background-image: none;
-  color: hsl(var(--sidebar-foreground));
-}
-
-/* Community rail column shares the dark side */
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] .bg-sidebar,
-:root[data-buzz-sidebar]:not(.dark) [data-testid="community-rail"],
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] > div.bg-sidebar {
-  background-color: hsl(var(--sidebar-background));
-  background-image: none;
-  color: hsl(var(--sidebar-foreground));
-}
-
-/* Bump weight so muted/70 labels still read on charcoal */
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] {
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] [data-sidebar="menu-button"],
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] [data-sidebar="group-label"],
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] [data-sidebar="menu-sub-button"] {
-  color: hsl(var(--sidebar-foreground));
-  font-weight: 600;
-}
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] .text-sidebar-foreground\/70,
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] .text-sidebar-foreground\/80 {
-  color: rgb(250 250 249 / 88%) !important;
-}
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] .text-sidebar-foreground\/50,
-:root[data-buzz-sidebar]:not(.dark) [data-testid="app-sidebar"] .text-sidebar-foreground\/60 {
-  color: rgb(250 250 249 / 75%) !important;
-}
-
-/* Dark mode: keep high contrast stone + amber (already readable) */
-:root[data-buzz-sidebar].dark {
-  --buzz-muted-foreground: rgb(250 250 249 / 72%);
-  --buzz-chrome-foreground: rgb(250 250 249 / 88%);
-  --buzz-nav-fg: rgb(250 250 249 / 90%);
-}
-
-/*
- * Shell styles (Settings → Appearance): chrome only — frame / primary / rail.
- * ThemeProvider sets `data-shell-style` on <html>. Persona 5 variants force a
- * dark class and recolor the Buzz gradient stops so the warm cream/stone ramp
- * does not clash with red/black chrome.
- */
+/* Persona 5 / Max extras (preview manga panel) */
 :root[data-buzz-sidebar][data-shell-style="persona5"],
 :root[data-buzz-sidebar][data-shell-style="persona5max"] {
-  --buzz-gradient-light-top: #1a0003;
-  --buzz-gradient-light-bottom: #0a0a0a;
-  --buzz-gradient-dark-top: #1a0003;
-  --buzz-gradient-dark-bottom: #000000;
-  --buzz-muted-foreground: rgb(255 255 255 / 72%);
-  --buzz-chrome-foreground: rgb(255 255 255 / 90%);
-  --buzz-nav-fg: rgb(255 255 255 / 92%);
+  --radius: 0rem;
   --buzz-hover-surface: rgb(230 0 18 / 18%);
   --buzz-active-surface: rgb(230 0 18 / 28%);
-  --radius: 0rem;
 }
 
 :root[data-buzz-sidebar][data-shell-style="persona5max"] {
-  --buzz-gradient-light-top: #2a0010;
-  --buzz-gradient-light-bottom: #000000;
-  --buzz-gradient-dark-top: #330014;
-  --buzz-gradient-dark-bottom: #000000;
   --buzz-hover-surface: rgb(255 0 51 / 22%);
   --buzz-active-surface: rgb(255 0 51 / 36%);
 }
 
-/* Max: thicker primary edge on main sidebars (manga-panel feel). */
 :root[data-buzz-sidebar][data-shell-style="persona5max"] [data-testid="app-sidebar"],
 :root[data-buzz-sidebar][data-shell-style="persona5max"] [data-testid="settings-sidebar"] {
   box-shadow: inset -4px 0 0 0 hsl(var(--primary));
