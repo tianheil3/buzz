@@ -3,6 +3,7 @@ import { ChevronDown, Cpu } from "lucide-react";
 
 import { Input } from "@/shared/ui/input";
 import { Switch } from "@/shared/ui/switch";
+import { type MsgKey, useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 
 import {
@@ -64,6 +65,7 @@ function writeDraft(key: string, value: string): void {
  * exposing implementation protocols or raw mesh controls.
  */
 export function MeshComputeSettingsCard() {
+  const { t } = useI18n();
   const { status, error, refresh } = useMeshNodeStatus();
   const [installedModels, setInstalledModels] = React.useState<
     MeshModelOption[]
@@ -196,18 +198,13 @@ export function MeshComputeSettingsCard() {
   return (
     <section className="min-w-0" data-testid="settings-mesh-share-compute">
       <SettingsSectionHeader
-        title="Share compute"
-        description={
-          <>
-            Share this machine with your relay. When on, other members can run
-            their agents here.
-          </>
-        }
+        title={t("settings.compute.title")}
+        description={t("settings.compute.description")}
       />
 
       {error ? (
         <p className="mb-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          Couldn't check shared compute: {error}
+          {t("settings.compute.checkFailed", { error })}
         </p>
       ) : null}
       {actionError ? (
@@ -226,7 +223,7 @@ export function MeshComputeSettingsCard() {
               className="text-sm font-medium"
               htmlFor="mesh-share-compute-toggle"
             >
-              Share this machine
+              {t("settings.compute.shareMachine")}
             </label>
             <StatusLine
               isConsuming={isConsuming}
@@ -241,13 +238,27 @@ export function MeshComputeSettingsCard() {
                     : "mt-0.5 text-2xs text-muted-foreground"
                 }
                 data-testid="mesh-serving-usage"
-                title={servingIndicator.detail ?? undefined}
+                title={
+                  servingIndicator.detailKey
+                    ? t(
+                        servingIndicator.detailKey as MsgKey,
+                        localizeServeVars(servingIndicator.detailVars, t),
+                      )
+                    : undefined
+                }
               >
-                {servingIndicator.label}
-                {servingIndicator.detail ? (
+                {t(
+                  servingIndicator.labelKey as MsgKey,
+                  localizeServeVars(servingIndicator.labelVars, t),
+                )}
+                {servingIndicator.detailKey ? (
                   <span className="text-muted-foreground">
                     {" "}
-                    · {servingIndicator.detail}
+                    ·{" "}
+                    {t(
+                      servingIndicator.detailKey as MsgKey,
+                      localizeServeVars(servingIndicator.detailVars, t),
+                    )}
                   </span>
                 ) : null}
               </p>
@@ -278,7 +289,7 @@ export function MeshComputeSettingsCard() {
             htmlFor="mesh-share-compute-model"
           >
             <Cpu className="h-4 w-4 text-muted-foreground" />
-            Model
+            {t("settings.compute.model")}
           </label>
           <div className="flex flex-col gap-2">
             <Input
@@ -290,12 +301,11 @@ export function MeshComputeSettingsCard() {
                 setModelInput(next);
                 writeDraft(MODEL_DRAFT_STORAGE_KEY, next);
               }}
-              placeholder="Qwen3-8B-Q4_K_M or hf://meshllm/qwen3-8b@main"
+              placeholder={t("settings.compute.modelPlaceholder")}
               value={modelInput}
             />
             <p className="text-sm font-normal text-muted-foreground">
-              Choose a suggested model below, or enter a model reference or
-              local file. Buzz downloads remote models when sharing starts.
+              {t("settings.compute.modelHint")}
             </p>
             {catalog && catalog.entries.length > 0 ? (
               <CatalogPicker
@@ -311,7 +321,7 @@ export function MeshComputeSettingsCard() {
             {installedModels.length > 0 ? (
               <div className="mt-1">
                 <p className="text-sm font-normal text-muted-foreground">
-                  Already installed on this machine:
+                  {t("settings.compute.alreadyInstalled")}
                 </p>
                 <ul
                   className="mt-1 flex flex-wrap gap-1.5"
@@ -352,11 +362,11 @@ export function MeshComputeSettingsCard() {
                 advancedOpen ? "rotate-0" : "-rotate-90",
               )}
             />
-            Advanced
+            {t("settings.compute.advanced")}
           </summary>
           <div className="mt-3 flex flex-col gap-2">
             <label className="text-sm font-medium" htmlFor="mesh-vram">
-              Max VRAM (GB)
+              {t("settings.compute.maxVram")}
             </label>
             <Input
               data-testid="mesh-share-compute-vram"
@@ -367,12 +377,12 @@ export function MeshComputeSettingsCard() {
                 setMaxVramGb(next);
                 writeDraft(MAX_VRAM_DRAFT_STORAGE_KEY, next);
               }}
-              placeholder="No limit"
+              placeholder={t("settings.compute.noLimit")}
               value={maxVramGb}
             />
             {status?.consoleUrl ? (
               <p className="text-sm font-normal text-muted-foreground">
-                Debug console:{" "}
+                {t("settings.compute.debugConsole")}{" "}
                 <a
                   className="underline"
                   href={status.consoleUrl}
@@ -388,7 +398,7 @@ export function MeshComputeSettingsCard() {
       </SettingsOptionGroup>
 
       <p className="mt-3 rounded-lg bg-muted/30 px-3 py-2 text-sm font-normal text-muted-foreground">
-        Only members of this relay can use this machine's shared compute.
+        {t("settings.compute.relayOnly")}
       </p>
     </section>
   );
@@ -409,6 +419,7 @@ function DownloadProgressBar({
 }: {
   progress: NonNullable<ReturnType<typeof useMeshDownloadProgress>["progress"]>;
 }) {
+  const { t } = useI18n();
   const percent = downloadPercent(progress);
   const bytes = formatDownloadBytes(progress);
   return (
@@ -418,7 +429,9 @@ function DownloadProgressBar({
     >
       <div className="flex items-baseline justify-between gap-2 text-sm">
         <span className="min-w-0 truncate font-medium">
-          {progress.status === "preparing" ? "Preparing" : "Downloading"}{" "}
+          {progress.status === "preparing"
+            ? t("settings.compute.preparing")
+            : t("settings.compute.downloading")}{" "}
           {progress.label}
         </span>
         <span className="shrink-0 text-muted-foreground">
@@ -443,12 +456,35 @@ function DownloadProgressBar({
   );
 }
 
-const FIT_LABEL: Record<MeshCatalogEntry["fit"], string> = {
-  comfortable: "Fits well",
-  tight: "Tight fit",
-  tradeoff: "Trade-off",
-  too_large: "Too large",
+const FIT_LABEL_KEYS: Record<MeshCatalogEntry["fit"], MsgKey> = {
+  comfortable: "settings.compute.fit.comfortable",
+  tight: "settings.compute.fit.tight",
+  tradeoff: "settings.compute.fit.tradeoff",
+  too_large: "settings.compute.fit.too_large",
 };
+
+type Translate = (key: MsgKey, vars?: Record<string, string | number>) => string;
+
+function localizeServeVars(
+  vars: Record<string, string | number> | undefined,
+  t: Translate,
+): Record<string, string | number> | undefined {
+  if (!vars) return vars;
+  const next = { ...vars };
+  if (typeof next.requestWord === "string") {
+    next.requestWord =
+      next.requestWord === "request"
+        ? t("settings.compute.word.request")
+        : t("settings.compute.word.requests");
+  }
+  if (typeof next.peerWord === "string") {
+    next.peerWord =
+      next.peerWord === "peer"
+        ? t("settings.compute.word.peer")
+        : t("settings.compute.word.peers");
+  }
+  return next;
+}
 
 const FIT_CLASS: Record<MeshCatalogEntry["fit"], string> = {
   comfortable: "text-green-600 dark:text-green-400",
@@ -473,6 +509,7 @@ function CatalogPicker({
   onPick: (name: string) => void;
   selected: string;
 }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = React.useState(false);
   // Above the fold: the Buzz-curated picks (models known to work well with
   // agents on shared compute). Below: everything else, as advanced options.
@@ -482,7 +519,7 @@ function CatalogPicker({
   return (
     <div className="mt-1" data-testid="mesh-share-compute-catalog">
       <p className="text-sm font-normal text-muted-foreground">
-        Recommended for this machine
+        {t("settings.compute.recommendedFor")}
         {catalog.gpuName ? ` (${catalog.gpuName}, ` : " ("}
         {catalog.vramDisplay} AI memory):
       </p>
@@ -513,16 +550,16 @@ function CatalogPicker({
                   {entry.size}
                 </span>
                 <span className={cn("shrink-0", FIT_CLASS[entry.fit])}>
-                  {FIT_LABEL[entry.fit]}
+                  {t(FIT_LABEL_KEYS[entry.fit])}
                 </span>
                 {entry.recommended ? (
                   <span className="shrink-0 rounded bg-primary/15 px-1.5 text-2xs font-medium text-primary">
-                    Recommended
+                    {t("settings.compute.recommendedBadge")}
                   </span>
                 ) : null}
                 {entry.installed ? (
                   <span className="shrink-0 text-2xs text-muted-foreground">
-                    Installed
+                    {t("settings.compute.installedBadge")}
                   </span>
                 ) : null}
               </button>
@@ -538,8 +575,8 @@ function CatalogPicker({
           type="button"
         >
           {expanded
-            ? "Hide advanced models"
-            : `Advanced: ${advanced.length} more models`}
+            ? t("settings.compute.hideAdvanced")
+            : t("settings.compute.showAdvanced", { count: advanced.length })}
         </button>
       ) : null}
     </div>
@@ -555,11 +592,20 @@ function StatusLine({
   pendingAction: "start" | "stop" | null;
   status: MeshNodeStatus | null;
 }) {
+  const { t } = useI18n();
   if (pendingAction === "start") {
-    return <p className="text-sm text-muted-foreground">Starting…</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {t("settings.compute.starting")}
+      </p>
+    );
   }
   if (pendingAction === "stop") {
-    return <p className="text-sm text-muted-foreground">Stopping…</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {t("settings.compute.stopping")}
+      </p>
+    );
   }
   // A client-mode runtime owns the single slot: this machine is consuming a
   // peer's compute, not sharing. The switch stays off, but remains available
@@ -567,58 +613,72 @@ function StatusLine({
   if (isConsuming) {
     return (
       <p className="text-sm text-muted-foreground">
-        This machine is currently using another member's shared compute. Turn on
-        sharing to switch to the selected local model; Buzz may briefly restart.
+        {t("settings.compute.consumingPeer")}
       </p>
     );
   }
   if (!status) {
-    return <p className="text-sm text-muted-foreground">Checking status…</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {t("settings.compute.checkingStatus")}
+      </p>
+    );
   }
   const { state, health, modelId, modelName } = status;
   const modelLabel = modelName ?? modelId ?? "";
 
   if (state === "off") {
     return (
-      <p className="text-sm text-muted-foreground">Not sharing right now.</p>
+      <p className="text-sm text-muted-foreground">
+        {t("settings.compute.notSharing")}
+      </p>
     );
   }
   if (state === "starting") {
     const reason =
       health.status === "degraded" || health.status === "failed"
         ? health.reason
-        : "Starting…";
+        : t("settings.compute.starting");
     return <p className="text-sm text-muted-foreground">{reason}</p>;
   }
   if (state === "running") {
     if (health.status === "failed") {
       return (
         <p className="text-sm text-destructive">
-          Couldn't load: {health.reason}
+          {t("settings.compute.loadFailed", { reason: health.reason })}
         </p>
       );
     }
     if (health.status === "degraded") {
       return (
         <p className="text-sm text-amber-600 dark:text-amber-400">
-          Active{modelLabel ? ` — ${modelLabel}` : ""}. {health.reason}
+          {t("settings.compute.active", {
+            model: modelLabel ? ` — ${modelLabel}` : "",
+            reason: health.reason,
+          })}
         </p>
       );
     }
     return (
       <p className="text-sm text-muted-foreground">
-        Sharing{modelLabel ? ` ${modelLabel}` : ""} with relay members.
+        {t("settings.compute.sharing", {
+          model: modelLabel ? ` ${modelLabel}` : "",
+        })}
       </p>
     );
   }
   if (state === "stopping") {
-    return <p className="text-sm text-muted-foreground">Stopping…</p>;
+    return (
+      <p className="text-sm text-muted-foreground">
+        {t("settings.compute.stopping")}
+      </p>
+    );
   }
   if (state === "failed") {
     const reason =
       health.status === "failed" || health.status === "degraded"
         ? health.reason
-        : "Couldn't start.";
+        : t("settings.compute.startFailed");
     return <p className="text-sm text-destructive">{reason}</p>;
   }
   return null;

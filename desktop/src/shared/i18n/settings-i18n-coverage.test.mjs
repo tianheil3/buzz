@@ -1,7 +1,10 @@
 /**
- * Path coverage: Settings sections for TIA-423 must not ship hard-coded
- * English for user-visible labels / toast / dialog strings, and required
- * bilingual keys must exist.
+ * Path coverage for TIA-423: every Settings section reachable from
+ * `renderSettingsSection` must localize user-visible copy via useI18n/t(),
+ * and required bilingual keys must exist.
+ *
+ * SETTINGS_RENDER_PATHS mirrors the imports + switch cases in SettingsPanels.tsx
+ * rather than a hand-curated residual list.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -14,23 +17,39 @@ import { messages, translate } from "./messages.ts";
 const here = dirname(fileURLToPath(import.meta.url));
 const desktopSrc = join(here, "../..");
 
-const SETTINGS_PATHS = [
-  "features/settings/ui/ChannelTemplatesSettingsCard.tsx",
-  "features/settings/ui/MobilePairingCard.tsx",
-  "features/settings/ui/HostedCommunitiesSettingsCard.tsx",
-  "features/settings/ui/ModerationQueueCard.tsx",
-  "features/settings/ui/SettingsPanels.tsx",
-  "features/settings/ui/NotificationSettingsCard.tsx",
+/**
+ * All component entry files actually rendered by `renderSettingsSection`
+ * (and nested Settings section children that ship owner-visible copy).
+ */
+const SETTINGS_RENDER_PATHS = [
+  // renderSettingsSection direct targets
   "features/settings/ui/ProfileSettingsCard.tsx",
-  "features/settings/ui/SignOutSection.tsx",
-  "features/settings/ui/SendFeedbackDialog.tsx",
+  "features/settings/ui/NotificationSettingsCard.tsx",
+  "features/settings/ui/ExperimentalFeaturesCard.tsx",
+  "features/settings/ui/PreventSleepSettingsCard.tsx",
   "features/settings/ui/HarnessesSettingsPanel.tsx",
+  "features/settings/ui/AgentDefaultsSettingsCard.tsx",
+  "features/agents/ui/AgentDefaultsEditor.tsx",
+  "features/settings/ui/ChannelTemplatesSettingsCard.tsx",
+  "features/mesh-compute/ui/MeshComputeSettingsCard.tsx",
+  "features/settings/ui/SettingsPanels.tsx", // ThemeSettingsCard / appearance
+  "features/settings/ui/KeyboardShortcutsCard.tsx",
+  "features/settings/ui/HostedCommunitiesSettingsCard.tsx",
+  "features/community-members/ui/CommunityMembersSettingsCard.tsx",
+  "features/settings/ui/ModerationQueueCard.tsx",
+  "features/custom-emoji/ui/CustomEmojiSettingsCard.tsx",
+  "features/local-archive/ui/LocalArchiveSettingsCard.tsx",
+  "features/settings/ui/MobilePairingCard.tsx",
+  "features/settings/UpdateChecker.tsx",
+  // nested settings UI
   "features/settings/ui/CustomHarnessForm.tsx",
   "features/settings/ui/HarnessCatalogDialog.tsx",
   "features/settings/ui/HarnessRow.tsx",
-  "features/settings/UpdateChecker.tsx",
+  "features/settings/ui/SignOutSection.tsx",
+  "features/settings/ui/SendFeedbackDialog.tsx",
   "features/settings/UpdateIndicator.tsx",
   "features/settings/SidebarUpdateCard.tsx",
+  "features/settings/ui/SoundPicker.tsx",
 ];
 
 /** Residual English QA flagged across rework rounds (must not appear live). */
@@ -66,7 +85,7 @@ const FORBIDDEN_LITERALS = [
   "No templates yet. Create one to save a reusable channel configuration.",
   "Pairing took too long. Try again.",
   "Sign in to manage hosted communities",
-  // Round 2 residual (9e26c293 QA)
+  // Round 2 residual
   "Desktop alerts",
   "Notify while viewing",
   "Home badge",
@@ -97,6 +116,42 @@ const FORBIDDEN_LITERALS = [
   "Custom harness",
   "No runtimes match.",
   "Already set up",
+  // Round 3 residual (QA 18:13)
+  "Keep addressed agents active",
+  "Keep awake while agents are active",
+  "Waiting for agents to start",
+  "Sleep prevention expired after 1 hour",
+  "Default harness",
+  "Select a harness",
+  "Save defaults",
+  "Couldn't load agent defaults",
+  "Couldn't save.",
+  "Choose an image file for custom emoji.",
+  "Failed to upload emoji image.",
+  "Failed to add emoji.",
+  "Failed to remove emoji.",
+  "Custom emoji",
+  "Upload an image",
+  "Choose different image",
+  "Upload image",
+  "Give it a name",
+  "Save emoji",
+  "Local archive",
+  "Save copies of relay messages to a local SQLite database",
+  "Archive subscription created.",
+  "Archive subscription removed.",
+  "Observer feed archive enabled.",
+  "Agent turn metric archive enabled.",
+  "Share compute",
+  "Share this machine with your relay",
+  "Couldn't check shared compute",
+  "Already installed on this machine:",
+  "Manage members and community access.",
+  "Search members",
+  "Invite to community",
+  "Made community admin",
+  "Remove from community",
+  "Couldn't update this community member.",
 ];
 
 const REQUIRED_KEYS = [
@@ -121,13 +176,41 @@ const REQUIRED_KEYS = [
   "settings.harness.addRuntimes",
   "settings.updates.check",
   "settings.updates.sidebar.readyTitle",
+  // Round 3 paths
+  "settings.agents.persistentAudience",
+  "settings.agents.preventSleep",
+  "settings.agentDefaults.defaultHarness",
+  "settings.agentDefaults.saveDefaults",
+  "settings.customEmoji.title",
+  "settings.customEmoji.toast.chooseImage",
+  "settings.localArchive.title",
+  "settings.localArchive.toast.created",
+  "settings.compute.title",
+  "settings.compute.shareMachine",
+  "settings.members.title",
+  "settings.members.search",
+  "settings.shortcuts.cat.Navigation",
+  "settings.shortcuts.item.quick-search.label",
+  "settings.experiments.feature.workflows.name",
+  "settings.sound.previewAria",
 ];
+
+function isCommentOrDocLine(line) {
+  const trimmed = line.trimStart();
+  return (
+    trimmed.startsWith("//") ||
+    trimmed.startsWith("*") ||
+    trimmed.startsWith("/*") ||
+    trimmed.startsWith("/**")
+  );
+}
 
 describe("settings i18n path coverage (TIA-423)", () => {
   it("required path keys exist in en and zh with real translations", () => {
     const allowSame = new Set([
       "appearance.shell.persona5max",
       "appearance.shell.persona5",
+      "settings.customEmoji.namePlaceholder",
     ]);
     for (const key of REQUIRED_KEYS) {
       assert.ok(key in messages.en, `missing en key ${key}`);
@@ -150,21 +233,25 @@ describe("settings i18n path coverage (TIA-423)", () => {
     assert.deepEqual(enKeys, zhKeys, "en/zh key parity");
   });
 
-  it("flagged settings sources do not hard-code QA residual English", () => {
-    for (const rel of SETTINGS_PATHS) {
+  it("renderSettingsSection entry sources do not hard-code QA residual English", () => {
+    for (const rel of SETTINGS_RENDER_PATHS) {
       const src = readFileSync(join(desktopSrc, rel), "utf8");
       for (const literal of FORBIDDEN_LITERALS) {
         const lines = src.split("\n");
         const offenders = lines.filter(
           (line) =>
             line.includes(literal) &&
-            !line.trimStart().startsWith("//") &&
-            !line.trimStart().startsWith("*") &&
+            !isCommentOrDocLine(line) &&
             !line.includes("FORBIDDEN") &&
             // English fallback map for non-UI export is allowed
             !line.includes("FEEDBACK_CATEGORY_LABELS") &&
             // Typed confirmation phrase constant is intentionally English
-            !line.includes("SIGNOUT_CONFIRM_PHRASE"),
+            !line.includes("SIGNOUT_CONFIRM_PHRASE") &&
+            // settingsSections descriptor labels are not the live nav labels
+            // (SettingsView uses SETTINGS_SECTION_LABEL_KEYS + t())
+            !line.includes('label: "') &&
+            // Kind group English labels remain as stable keys in data modules
+            !rel.includes("localArchiveKinds"),
         );
         assert.equal(
           offenders.length,
@@ -175,11 +262,35 @@ describe("settings i18n path coverage (TIA-423)", () => {
     }
   });
 
-  it("flagged settings sources call useI18n / t for localization", () => {
-    for (const rel of SETTINGS_PATHS) {
+  it("renderSettingsSection entry sources call useI18n / t for localization", () => {
+    // ThemeSettingsCard lives inside SettingsPanels and already uses useI18n.
+    // Nested pure logic files are not in SETTINGS_RENDER_PATHS.
+    for (const rel of SETTINGS_RENDER_PATHS) {
       const src = readFileSync(join(desktopSrc, rel), "utf8");
       assert.match(src, /useI18n/, `${rel} must use useI18n`);
       assert.match(src, /\bt\(/, `${rel} must call t(`);
+    }
+  });
+
+  it("SettingsPanels renderSettingsSection switch covers declared sections", () => {
+    const panels = readFileSync(
+      join(desktopSrc, "features/settings/ui/SettingsPanels.tsx"),
+      "utf8",
+    );
+    const sectionMatch = panels.match(
+      /export type SettingsSection =\s*([\s\S]*?);/,
+    );
+    assert.ok(sectionMatch, "SettingsSection type present");
+    const sectionIds = [...sectionMatch[1].matchAll(/"([^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    assert.ok(sectionIds.length >= 14, "expected full section set");
+    for (const id of sectionIds) {
+      assert.match(
+        panels,
+        new RegExp(`case "${id}"`),
+        `renderSettingsSection missing case for ${id}`,
+      );
     }
   });
 });

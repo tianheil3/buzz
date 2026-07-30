@@ -1,8 +1,9 @@
-import { useI18n } from "@/shared/i18n";
+import { type MsgKey, useI18n } from "@/shared/i18n";
 import {
   getShortcutsByCategory,
   getPlatformKeys,
   type KeyboardShortcut,
+  type ShortcutCategory,
 } from "@/shared/lib/keyboard-shortcuts";
 import { SettingsOptionGroup, SettingsOptionRow } from "./SettingsOptionGroup";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
@@ -29,6 +30,18 @@ function KeyCombo({ shortcut }: { shortcut: KeyboardShortcut }) {
   );
 }
 
+function categoryKey(category: ShortcutCategory): MsgKey {
+  return `settings.shortcuts.cat.${category}` as MsgKey;
+}
+
+function shortcutLabelKey(id: string): MsgKey {
+  return `settings.shortcuts.item.${id}.label` as MsgKey;
+}
+
+function shortcutDescKey(id: string): MsgKey {
+  return `settings.shortcuts.item.${id}.desc` as MsgKey;
+}
+
 export function KeyboardShortcutsCard() {
   const { t } = useI18n();
   const categories = getShortcutsByCategory();
@@ -44,7 +57,7 @@ export function KeyboardShortcutsCard() {
         {[...categories.entries()].map(([category, shortcuts]) => (
           <div key={category}>
             <h2 className="mb-2 text-lg font-semibold tracking-tight">
-              {category}
+              {t(categoryKey(category))}
             </h2>
             <SettingsOptionGroup>
               {shortcuts.map((shortcut) => (
@@ -54,10 +67,10 @@ export function KeyboardShortcutsCard() {
                 >
                   <div className="min-w-0 flex-1">
                     <span className="text-sm font-medium text-foreground">
-                      {shortcut.label}
+                      {t(shortcutLabelKey(shortcut.id))}
                     </span>
                     <span className="ml-2 text-muted-foreground">
-                      {shortcut.description}
+                      {t(shortcutDescKey(shortcut.id))}
                     </span>
                   </div>
                   <KeyCombo shortcut={shortcut} />

@@ -4,16 +4,8 @@ import type { MeshServingUsage } from "@/shared/api/tauriMesh";
  * Pure projection of host-side serving usage into a small, politely-worded
  * indicator model for the Share compute card.
  *
- * Single source of truth for "who is using the compute I'm sharing" copy, so
- * the component and its tests agree. Kept pure/total (accepts null = not yet
- * fetched) and defensive (all fields optional-safe via the Rust extractor).
- *
- * Distinctions that matter:
- * - `localAttempts` = this machine's OWN agents using the local model. Not a
- *   "someone else is here" signal — surfaced softly as activity, not as a peer.
- * - `remoteAttempts` / `endpointAttempts` = another member consuming this
- *   machine's compute. THIS is the "someone connected to what I'm sharing"
- *   signal.
+ * Returns i18n keys + vars so the settings UI can render bilingual copy.
+ * Kept pure/total (accepts null = not yet fetched) and defensive.
  */
 export type MeshServingIndicator = {
   /** Whether to show anything at all (only while actively sharing). */
@@ -22,15 +14,13 @@ export type MeshServingIndicator = {
   active: boolean;
   /** A non-local member is (or has been) consuming this machine's compute. */
   hasRemoteConsumers: boolean;
-  /** One-line status suitable for the card. */
-  label: string;
-  /** Longer detail for a tooltip / secondary line. */
-  detail: string | null;
+  /** One-line status key suitable for the card. */
+  labelKey: string;
+  labelVars?: Record<string, string | number>;
+  /** Longer detail key for a tooltip / secondary line. */
+  detailKey: string | null;
+  detailVars?: Record<string, string | number>;
 };
-
-function plural(n: number, one: string, many = `${one}s`): string {
-  return n === 1 ? one : many;
-}
 
 /**
  * @param usage  latest snapshot from `meshServingUsage`, or null if not fetched
@@ -46,8 +36,8 @@ export function deriveServingIndicator(
     show: false,
     active: false,
     hasRemoteConsumers: false,
-    label: "",
-    detail: null,
+    labelKey: "",
+    detailKey: null,
   };
   if (!isSharing || !usage) {
     return hidden;
@@ -60,14 +50,36 @@ export function deriveServingIndicator(
   // Remote consumer present (or seen) — the headline case the user asked for.
   if (hasRemoteConsumers) {
     const remote = usage.remoteAttempts + usage.endpointAttempts;
-    const label = active
-      ? `In use now by another member · ${usage.inflight} live`
-      : `Used by another member · ${remote} ${plural(remote, "request")}`;
-    const detail =
+    const labelKey = active
+      ? "settings.compute.serve.inUse"
+      : "settings.compute.serve.usedBy";
+    const labelVars: Record<string, string | number> = active
+      ? { count: usage.inflight }
+      : {
+          count: remote,
+          requestWord: remote === 1 ? "request" : "requests",
+        };
+    const detailKey =
       usage.peers > 0
-        ? `${usage.peers} ${plural(usage.peers, "peer")} on the mesh · ${Math.round(usage.tokensPerSecond)} tok/s`
-        : `${Math.round(usage.tokensPerSecond)} tok/s`;
-    return { show: true, active, hasRemoteConsumers: true, label, detail };
+        ? "settings.compute.serve.peersDetail"
+        : "settings.compute.serve.tps";
+    const detailVars: Record<string, string | number> =
+      usage.peers > 0
+        ? {
+            peers: usage.peers,
+            peerWord: usage.peers === 1 ? "peer" : "peers",
+            tps: Math.round(usage.tokensPerSecond),
+          }
+        : { tps: Math.round(usage.tokensPerSecond) };
+    return {
+      show: true,
+      active,
+      hasRemoteConsumers: true,
+      labelKey,
+      labelVars,
+      detailKey,
+      detailVars,
+    };
   }
 
   // Only local (this machine's own agents) — show softly as activity.
@@ -76,8 +88,10 @@ export function deriveServingIndicator(
       show: true,
       active: true,
       hasRemoteConsumers: false,
-      label: `Serving your agent · ${usage.inflight} live`,
-      detail: `${Math.round(usage.tokensPerSecond)} tok/s`,
+      labelKey: "settings.compute.serve.yourAgent",
+      labelVars: { count: usage.inflight },
+      detailKey: "settings.compute.serve.tps",
+      detailVars: { tps: Math.round(usage.tokensPerSecond) },
     };
   }
   if (usage.requestsServed > 0) {
@@ -85,8 +99,13 @@ export function deriveServingIndicator(
       show: true,
       active: false,
       hasRemoteConsumers: false,
-      label: "Idle · no one using it right now",
-      detail: `${usage.requestsServed} ${plural(usage.requestsServed, "request")} served this session`,
+      labelKey: "settings.compute.serve.idleNow",
+      detailKey: "settings.compute.serve.servedSession",
+      detailVars: {
+        count: usage.requestsServed,
+        requestWord:
+          usage.requestsServed === 1 ? "request" : "requests",
+      },
     };
   }
 
@@ -95,7 +114,7 @@ export function deriveServingIndicator(
     show: true,
     active: false,
     hasRemoteConsumers: false,
-    label: "Idle · no one using it yet",
-    detail: null,
+    labelKey: "settings.compute.serve.idleYet",
+    detailKey: null,
   };
 }

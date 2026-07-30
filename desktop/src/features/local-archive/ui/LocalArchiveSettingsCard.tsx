@@ -17,6 +17,7 @@ import {
 } from "@/shared/constants/kinds";
 import { useChannelsQuery } from "@/features/channels/hooks";
 import { useIdentityQuery } from "@/shared/api/hooks";
+import { type MsgKey, useI18n } from "@/shared/i18n";
 import { Button } from "@/shared/ui/button";
 import { Checkbox } from "@/shared/ui/checkbox";
 import { Switch } from "@/shared/ui/switch";
@@ -40,26 +41,69 @@ import {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+type Translate = (key: MsgKey, vars?: Record<string, string | number>) => string;
+
 function scopeLabel(
   sub: SaveSubscription,
   channelNameById: Map<string, string>,
+  t: Translate,
 ): string {
   if (sub.scopeType === "channel_h") {
     return channelNameById.get(sub.scopeValue) ?? sub.scopeValue;
   }
   if (sub.scopeType === "owner_p") {
     if (sub.kinds.includes(KIND_AGENT_TURN_METRIC)) {
-      return "My agents' turn metrics";
+      return t("settings.localArchive.scope.metrics");
     }
-    return "My agent session frames";
+    return t("settings.localArchive.scope.frames");
   }
   return sub.scopeValue;
 }
 
-function kindSummary(kinds: number[]): string {
-  if (kinds.length === 0) return "no kinds";
+function kindSummary(kinds: number[], t: Translate): string {
+  if (kinds.length === 0) return t("settings.localArchive.kindSummaryNone");
   if (kinds.length <= 4) return kinds.join(", ");
-  return `${kinds.slice(0, 3).join(", ")} +${kinds.length - 3} more`;
+  return t("settings.localArchive.kindSummaryMore", {
+    head: kinds.slice(0, 3).join(", "),
+    n: kinds.length - 3,
+  });
+}
+
+const GROUP_LABEL_KEYS: Record<string, MsgKey> = {
+  "Messages & posts": "settings.localArchive.group.messages",
+  "Reactions, edits & deletions": "settings.localArchive.group.aux",
+  "Huddle events": "settings.localArchive.group.huddle",
+  "System messages": "settings.localArchive.group.system",
+};
+
+const KIND_LABEL_KEYS: Record<string, MsgKey> = {
+  "Message diffs (kind 40008)": "settings.localArchive.kind.messageDiffs",
+  "Huddle started": "settings.localArchive.kind.huddleStarted",
+  "Participant joined": "settings.localArchive.kind.participantJoined",
+  "Participant left": "settings.localArchive.kind.participantLeft",
+  "Huddle ended": "settings.localArchive.kind.huddleEnded",
+  "System messages (kind 40099)": "settings.localArchive.kind.systemMessages",
+  "Event deletions (kind 5)": "settings.localArchive.kind.deletions",
+  "Reactions (kind 7)": "settings.localArchive.kind.reactions",
+  "Stream messages (kind 9)": "settings.localArchive.kind.streamMessages",
+  "Buzz-native deletions (kind 9005)": "settings.localArchive.kind.buzzDeletions",
+  "Stream messages v2 (kind 40002)": "settings.localArchive.kind.streamV2",
+  "Message edits (kind 40003)": "settings.localArchive.kind.messageEdits",
+  "Forum posts (kind 45001)": "settings.localArchive.kind.forumPosts",
+  "Forum comments (kind 45003)": "settings.localArchive.kind.forumComments",
+};
+
+function translateGroupLabel(label: string, t: Translate): string {
+  const key = GROUP_LABEL_KEYS[label];
+  return key ? t(key) : label;
+}
+
+function translateKindLabel(label: string, t: Translate): string {
+  const key = KIND_LABEL_KEYS[label];
+  if (key) return t(key);
+  const m = /^Kind (\d+)$/.exec(label);
+  if (m) return t("settings.localArchive.kind.generic", { kind: m[1] });
+  return label;
 }
 
 // ── Observer-feed archive section ─────────────────────────────────────────────
@@ -77,11 +121,12 @@ function ObserverArchiveSection({
   toggling,
   onToggle,
 }: ObserverSectionProps) {
+  const { t } = useI18n();
   const toggleDisabled = toggling || policy === undefined || policy === true;
   return (
     <div className="space-y-3" data-testid="local-archive-observer-section">
       <h2 className="text-lg font-semibold tracking-tight">
-        Agent observer feed
+        {t("settings.localArchive.observerTitle")}
       </h2>
       <SettingsOptionGroup>
         <SettingsOptionRow>
@@ -90,12 +135,16 @@ function ObserverArchiveSection({
               className="text-sm font-medium"
               htmlFor="local-archive-observer-toggle"
             >
-              Archive my agents' observer frames
+              {t("settings.localArchive.observerLabel")}
             </label>
             <p className="text-sm font-normal text-muted-foreground">
               {policy === true
-                ? `Always on for internal builds. Kind ${KIND_AGENT_OBSERVER_FRAME} observer frames are ephemeral — not stored by the relay — so local archiving is the only way to retain them.`
-                : `Saves kind ${KIND_AGENT_OBSERVER_FRAME} observer frames addressed to your pubkey. These are ephemeral — not stored by the relay — so local archiving is the only way to retain them.`}
+                ? t("settings.localArchive.observerDescAlways", {
+                    kind: KIND_AGENT_OBSERVER_FRAME,
+                  })
+                : t("settings.localArchive.observerDesc", {
+                    kind: KIND_AGENT_OBSERVER_FRAME,
+                  })}
             </p>
           </div>
           <Switch
@@ -124,10 +173,11 @@ function AgentMetricArchiveSection({
   toggling,
   onToggle,
 }: AgentMetricSectionProps) {
+  const { t } = useI18n();
   return (
     <div className="space-y-3" data-testid="local-archive-agent-metric-section">
       <h2 className="text-lg font-semibold tracking-tight">
-        Agent turn metrics
+        {t("settings.localArchive.metricTitle")}
       </h2>
       <SettingsOptionGroup>
         <SettingsOptionRow>
@@ -136,12 +186,12 @@ function AgentMetricArchiveSection({
               className="text-sm font-medium"
               htmlFor="local-archive-agent-metric-toggle"
             >
-              Archive my agents' turn metrics
+              {t("settings.localArchive.metricLabel")}
             </label>
             <p className="text-sm font-normal text-muted-foreground">
-              Saves kind {KIND_AGENT_TURN_METRIC} turn-metric events addressed
-              to your pubkey. Stored as plaintext in your local archive so
-              token-usage calculators can read them directly.
+              {t("settings.localArchive.metricDesc", {
+                kind: KIND_AGENT_TURN_METRIC,
+              })}
             </p>
           </div>
           <Switch
@@ -165,6 +215,7 @@ type KindChecklistProps = {
 };
 
 function KindChecklist({ checkedKinds, onChange }: KindChecklistProps) {
+  const { t } = useI18n();
   return (
     <div className="space-y-4">
       {KIND_GROUPS.map((group) => {
@@ -186,7 +237,7 @@ function KindChecklist({ checkedKinds, onChange }: KindChecklistProps) {
                 className="cursor-pointer text-sm font-medium"
                 htmlFor={`local-archive-group-${group.label}`}
               >
-                {group.label}
+                {translateGroupLabel(group.label, t)}
               </label>
             </div>
             {/* Individual kind checkboxes */}
@@ -205,7 +256,7 @@ function KindChecklist({ checkedKinds, onChange }: KindChecklistProps) {
                     className="cursor-pointer text-sm text-muted-foreground"
                     htmlFor={`local-archive-kind-${kind}`}
                   >
-                    {label}
+                    {translateKindLabel(label, t)}
                   </label>
                 </div>
               ))}
@@ -225,6 +276,7 @@ type CustomKindsInputProps = {
 };
 
 function CustomKindsInput({ value, onChange }: CustomKindsInputProps) {
+  const { t } = useI18n();
   const { invalid } = parseCustomKinds(value);
   const hasInvalid = invalid.length > 0;
   return (
@@ -233,31 +285,30 @@ function CustomKindsInput({ value, onChange }: CustomKindsInputProps) {
         className="mb-1.5 block text-sm font-medium"
         htmlFor="local-archive-custom-kinds"
       >
-        Advanced: custom kinds
+        {t("settings.localArchive.customKinds")}
       </label>
       <input
         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         data-testid="local-archive-custom-kinds"
         id="local-archive-custom-kinds"
         onChange={(e) => onChange(e.target.value)}
-        placeholder="e.g. 30023 1337"
+        placeholder={t("settings.localArchive.customKindsPlaceholder")}
         type="text"
         value={value}
       />
       <p className="mt-1 text-xs text-muted-foreground">
-        Space- or comma-separated non-negative integers. Kinds already in the
-        checklist above are ignored.
+        {t("settings.localArchive.customKindsHint")}
       </p>
       {hasInvalid && (
         <p
           className="mt-1 text-xs text-destructive"
           data-testid="local-archive-custom-kinds-error"
         >
-          Invalid tokens (ignored):{" "}
-          {invalid.map((t, i) => (
-            <React.Fragment key={t}>
+          {t("settings.localArchive.customKindsInvalid")}{" "}
+          {invalid.map((tok, i) => (
+            <React.Fragment key={tok}>
               {i > 0 && ", "}
-              <code className="font-mono">{t}</code>
+              <code className="font-mono">{tok}</code>
             </React.Fragment>
           ))}
         </p>
@@ -275,6 +326,7 @@ type AddFormProps = {
 };
 
 function AddSubscriptionForm({ channels, onSaved, onCancel }: AddFormProps) {
+  const { t } = useI18n();
   const [selectedChannelId, setSelectedChannelId] = React.useState("");
   const [checkedKinds, setCheckedKinds] = React.useState<Set<number>>(
     new Set(),
@@ -302,15 +354,15 @@ function AddSubscriptionForm({ channels, onSaved, onCancel }: AddFormProps) {
         request.kinds,
       );
       onSaved();
-      toast.success("Archive subscription created.");
+      toast.success(t("settings.localArchive.toast.created"));
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to create subscription.",
+        err instanceof Error ? err.message : t("settings.localArchive.toast.createFailed"),
       );
     } finally {
       setIsAdding(false);
     }
-  }, [request, onSaved]);
+  }, [request, onSaved, t]);
 
   const handleCancel = () => {
     setSelectedChannelId("");
@@ -328,7 +380,7 @@ function AddSubscriptionForm({ channels, onSaved, onCancel }: AddFormProps) {
             className="mb-1.5 block text-sm font-medium"
             htmlFor="local-archive-channel-select"
           >
-            Channel
+            {t("settings.localArchive.channel")}
           </label>
           <select
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -337,7 +389,7 @@ function AddSubscriptionForm({ channels, onSaved, onCancel }: AddFormProps) {
             onChange={(e) => setSelectedChannelId(e.target.value)}
             value={selectedChannelId}
           >
-            <option value="">Select a channel…</option>
+            <option value="">{t("settings.localArchive.selectChannel")}</option>
             {channels.map((ch) => (
               <option key={ch.id} value={ch.id}>
                 {ch.name}
@@ -348,7 +400,7 @@ function AddSubscriptionForm({ channels, onSaved, onCancel }: AddFormProps) {
 
         {/* Event types (per-kind checklist) */}
         <div>
-          <p className="mb-3 text-sm font-medium">Event types</p>
+          <p className="mb-3 text-sm font-medium">{t("settings.localArchive.eventTypes")}</p>
           <KindChecklist
             checkedKinds={checkedKinds}
             onChange={setCheckedKinds}
@@ -365,7 +417,7 @@ function AddSubscriptionForm({ channels, onSaved, onCancel }: AddFormProps) {
             type="button"
             variant="outline"
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             data-testid="local-archive-confirm-add"
@@ -373,7 +425,7 @@ function AddSubscriptionForm({ channels, onSaved, onCancel }: AddFormProps) {
             onClick={() => void handleAdd()}
             type="button"
           >
-            {isAdding ? "Saving…" : "Save"}
+            {isAdding ? t("settings.channelTemplates.saving") : t("common.save")}
           </Button>
         </div>
       </div>
@@ -384,6 +436,7 @@ function AddSubscriptionForm({ channels, onSaved, onCancel }: AddFormProps) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export function LocalArchiveSettingsCard() {
+  const { t } = useI18n();
   const identityQuery = useIdentityQuery();
   const channelsQuery = useChannelsQuery();
   const [subs, setSubs] = React.useState<SaveSubscription[]>([]);
@@ -441,16 +494,16 @@ export function LocalArchiveSettingsCard() {
       try {
         await deleteSaveSubscription(scopeType, scopeValue);
         await reload();
-        toast.success("Archive subscription removed.");
+        toast.success(t("settings.localArchive.toast.removed"));
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "Failed to remove subscription.",
+          err instanceof Error ? err.message : t("settings.localArchive.toast.removeFailed"),
         );
       } finally {
         setDeletingKey(null);
       }
     },
-    [reload],
+    [reload, t],
   );
 
   const observerEnabled = subs.some(
@@ -475,21 +528,21 @@ export function LocalArchiveSettingsCard() {
         }
         toast.success(
           checked
-            ? "Observer feed archive enabled."
-            : "Observer feed archive disabled.",
+            ? t("settings.localArchive.toast.observerOn")
+            : t("settings.localArchive.toast.observerOff"),
         );
         await reload();
       } catch (err) {
         toast.error(
           err instanceof Error
             ? err.message
-            : "Failed to update observer archive.",
+            : t("settings.localArchive.toast.observerFailed"),
         );
       } finally {
         setObserverToggling(false);
       }
     },
-    [pubkey, observerPolicy, reload],
+    [pubkey, observerPolicy, reload, t],
   );
 
   const handleMetricToggle = React.useCallback(
@@ -505,21 +558,21 @@ export function LocalArchiveSettingsCard() {
         setExplicitAgentMetricArchiveChoice(pubkey, checked);
         toast.success(
           checked
-            ? "Agent turn metric archive enabled."
-            : "Agent turn metric archive disabled.",
+            ? t("settings.localArchive.toast.metricOn")
+            : t("settings.localArchive.toast.metricOff"),
         );
         await reload();
       } catch (err) {
         toast.error(
           err instanceof Error
             ? err.message
-            : "Failed to update agent metric archive.",
+            : t("settings.localArchive.toast.metricFailed"),
         );
       } finally {
         setMetricToggling(false);
       }
     },
-    [pubkey, reload],
+    [pubkey, reload, t],
   );
 
   // Non-owner_p subscriptions shown in the active-subscriptions list.
@@ -530,8 +583,8 @@ export function LocalArchiveSettingsCard() {
   return (
     <section className="min-w-0" data-testid="settings-local-archive">
       <SettingsSectionHeader
-        title="Local archive"
-        description="Save copies of relay messages to a local SQLite database in your Buzz nest. Events are re-verified against the relay at archive time."
+        title={t("settings.localArchive.title")}
+        description={t("settings.localArchive.description")}
       />
 
       <div className="space-y-6">
@@ -553,19 +606,22 @@ export function LocalArchiveSettingsCard() {
         {/* Channel subscriptions */}
         <div className="space-y-3" data-testid="local-archive-subscriptions">
           <h2 className="text-lg font-semibold tracking-tight">
-            Channel subscriptions
-            {channelSubs.length > 0 ? ` (${channelSubs.length})` : ""}
+            {channelSubs.length > 0
+              ? t("settings.localArchive.channelSubsCount", {
+                  count: channelSubs.length,
+                })
+              : t("settings.localArchive.channelSubs")}
           </h2>
           {isLoading ? (
             <SettingsOptionGroup>
               <div className="px-4 py-3 text-sm font-normal text-muted-foreground">
-                Loading…
+                {t("common.loading")}
               </div>
             </SettingsOptionGroup>
           ) : channelSubs.length === 0 ? (
             <SettingsOptionGroup>
               <div className="px-4 py-3 text-sm font-normal text-muted-foreground">
-                No channel subscriptions yet. Add one below.
+                {t("settings.localArchive.noChannelSubs")}
               </div>
             </SettingsOptionGroup>
           ) : (
@@ -581,14 +637,19 @@ export function LocalArchiveSettingsCard() {
                     <Archive className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
-                        {scopeLabel(sub, channelNameById)}
+                        {scopeLabel(sub, channelNameById, t)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {sub.scopeType} · kinds: {kindSummary(sub.kinds)}
+                        {t("settings.localArchive.kindsLine", {
+                          scopeType: sub.scopeType,
+                          kinds: kindSummary(sub.kinds, t),
+                        })}
                       </p>
                     </div>
                     <Button
-                      aria-label={`Remove archive subscription for ${scopeLabel(sub, channelNameById)}`}
+                      aria-label={t("settings.localArchive.removeAria", {
+                        name: scopeLabel(sub, channelNameById, t),
+                      })}
                       disabled={deletingKey === key}
                       onClick={() =>
                         void handleDelete(sub.scopeType, sub.scopeValue)
@@ -608,7 +669,7 @@ export function LocalArchiveSettingsCard() {
         {/* Add channel subscription */}
         <div className="space-y-3" data-testid="local-archive-add">
           <h2 className="text-lg font-semibold tracking-tight">
-            Add channel subscription
+            {t("settings.localArchive.addChannelSub")}
           </h2>
           {isAddingOpen ? (
             <AddSubscriptionForm
@@ -623,9 +684,11 @@ export function LocalArchiveSettingsCard() {
             <SettingsOptionGroup>
               <SettingsOptionRow>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">Subscribe to a channel</p>
+                  <p className="text-sm font-medium">
+                    {t("settings.localArchive.subscribeTitle")}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    Choose a channel and select which event types to archive.
+                    {t("settings.localArchive.subscribeDesc")}
                   </p>
                 </div>
                 <Button
@@ -634,7 +697,7 @@ export function LocalArchiveSettingsCard() {
                   size="sm"
                   variant="outline"
                 >
-                  Add
+                  {t("settings.localArchive.add")}
                 </Button>
               </SettingsOptionRow>
             </SettingsOptionGroup>
