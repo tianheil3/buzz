@@ -40,7 +40,10 @@ type PairingStep =
   | "done"
   | "error";
 
-function pairingErrorMessage(error: unknown) {
+function pairingErrorMessage(
+  error: unknown,
+  t: (key: import("@/shared/i18n").MsgKey, vars?: Record<string, string | number>) => string,
+) {
   const message =
     error instanceof Error
       ? error.message
@@ -49,10 +52,10 @@ function pairingErrorMessage(error: unknown) {
         : "";
 
   if (message.toLowerCase().includes("timeout waiting for eose")) {
-    return "Pairing took too long. Try again.";
+    return t("settings.mobile.error.timeout");
   }
 
-  return message || "We couldn't start pairing. Try again.";
+  return message || t("settings.mobile.error.startFailed");
 }
 
 function isPairingSessionTimeout(message: string) {
@@ -72,6 +75,7 @@ function PairingStatusDialog({
   sasCode: string | null;
   step: PairingStep;
 }) {
+  const { t } = useI18n();
   const open = step === "sas" || step === "transferring" || step === "done";
 
   return (
@@ -87,13 +91,13 @@ function PairingStatusDialog({
       >
         <div className="flex max-h-[85vh] flex-col">
           <DialogHeader className="shrink-0 pb-5 pr-8">
-            <DialogTitle>Pair mobile device</DialogTitle>
+            <DialogTitle>{t("settings.mobile.pairTitle")}</DialogTitle>
             <DialogDescription>
               {step === "sas"
-                ? "Verify the security code matches your mobile device."
+                ? t("settings.mobile.verifyCode")
                 : step === "done"
-                  ? "Your mobile device is now paired."
-                  : "Securely sending your identity to the mobile app."}
+                  ? t("settings.mobile.paired")
+                  : t("settings.mobile.sendingIdentity")}
             </DialogDescription>
           </DialogHeader>
 
@@ -103,7 +107,7 @@ function PairingStatusDialog({
                 <div className="flex flex-col items-center gap-3 py-4">
                   <ShieldCheck className="h-10 w-10 text-primary" />
                   <p className="text-sm font-medium">
-                    Verify this code matches your mobile device
+                    {t("settings.mobile.verifyMatch")}
                   </p>
                   <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-8 py-4">
                     <p
@@ -114,8 +118,7 @@ function PairingStatusDialog({
                     </p>
                   </div>
                   <p className="text-center text-xs text-muted-foreground">
-                    You are about to transfer your Buzz identity to another
-                    device. Only confirm if you initiated this pairing.
+                    {t("settings.mobile.transferWarning")}
                   </p>
                 </div>
 
@@ -127,7 +130,7 @@ function PairingStatusDialog({
                     variant="outline"
                   >
                     <X className="mr-1.5 h-4 w-4" />
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button
                     className="flex-1"
@@ -135,7 +138,7 @@ function PairingStatusDialog({
                     onClick={onConfirm}
                   >
                     <Check className="mr-1.5 h-4 w-4" />
-                    Codes match
+                    {t("settings.mobile.codesMatch")}
                   </Button>
                 </div>
               </div>
@@ -146,7 +149,7 @@ function PairingStatusDialog({
                   className="h-6 w-6 animate-spin text-muted-foreground"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Sending identity to mobile device...
+                  {t("settings.mobile.sendingToMobile")}
                 </p>
               </div>
             ) : step === "done" ? (
@@ -157,9 +160,11 @@ function PairingStatusDialog({
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
                   <Check className="h-6 w-6 text-green-600 dark:text-green-400" />
                 </div>
-                <p className="text-sm font-medium">Mobile device paired</p>
+                <p className="text-sm font-medium">
+                  {t("settings.mobile.devicePaired")}
+                </p>
                 <p className="text-center text-xs text-muted-foreground">
-                  Your mobile app is now connected to this relay.
+                  {t("settings.mobile.connectedToRelay")}
                 </p>
               </div>
             ) : null}
@@ -203,12 +208,12 @@ export function MobilePairingCard({
       (err) => {
         if (requestId === requestIdRef.current) {
           pairingActiveRef.current = false;
-          setError(pairingErrorMessage(err));
+          setError(pairingErrorMessage(err, t));
           setStep("error");
         }
       },
     );
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     ++requestIdRef.current;
@@ -248,7 +253,7 @@ export function MobilePairingCard({
     listen<{ reason: string }>("pairing-aborted", (event) => {
       if (!cancelled && pairingActiveRef.current) {
         pairingActiveRef.current = false;
-        setError(`Pairing stopped: ${event.payload.reason}`);
+        setError(t("settings.mobile.error.stopped", { reason: event.payload.reason }));
         setStep("error");
       }
     }).then((fn) => {
@@ -267,7 +272,7 @@ export function MobilePairingCard({
           return;
         }
 
-        setError(pairingErrorMessage(event.payload.message));
+        setError(pairingErrorMessage(event.payload.message, t));
         setStep("error");
       }
     }).then((fn) => {
@@ -284,12 +289,12 @@ export function MobilePairingCard({
         cancelPairing().catch(() => {});
       }
     };
-  }, [currentPubkey]);
+  }, [currentPubkey, t]);
 
   async function handleCopy() {
     if (!qrUri) return;
     await writeTextToClipboard(qrUri);
-    toast.success("Copied to clipboard");
+    toast.success(t("common.copied"));
   }
 
   async function handleConfirmSas() {
@@ -300,7 +305,7 @@ export function MobilePairingCard({
       setError(
         err instanceof Error
           ? err.message
-          : "We couldn't send your identity. Try again.",
+          : t("settings.mobile.error.sendFailed"),
       );
       pairingActiveRef.current = false;
       setStep("error");
@@ -310,7 +315,7 @@ export function MobilePairingCard({
   function handleDenySas() {
     pairingActiveRef.current = false;
     cancelPairing().catch(() => {});
-    setError("The codes didn't match. Pairing was canceled.");
+    setError(t("settings.mobile.error.codesMismatch"));
     setStep("error");
   }
 
@@ -325,7 +330,7 @@ export function MobilePairingCard({
     }
 
     cancelPairing().catch(() => {});
-    setError("Pairing was canceled.");
+    setError(t("settings.mobile.error.canceled"));
     setStep("error");
   }
 
@@ -351,13 +356,13 @@ export function MobilePairingCard({
                 centerImageSrc="/app-icon@2x.png"
                 data-testid="mobile-pairing-qr"
                 size={240}
-                title="Mobile pairing QR code"
+                title={t("settings.mobile.qrTitle")}
                 value={qrUri}
               />
             ) : step === "expired" ? (
               <div className="flex max-w-52 origin-center animate-in flex-col items-center gap-3 text-center fade-in-0 zoom-in-95 duration-[250ms] ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:animate-none">
                 <p className="text-sm text-muted-foreground">
-                  Pairing code expired.
+                  {t("settings.mobile.codeExpired")}
                 </p>
                 <Button
                   data-testid="regenerate-pairing-button"
@@ -367,14 +372,14 @@ export function MobilePairingCard({
                   variant="outline"
                 >
                   <RefreshCw className="mr-1.5 h-4 w-4" />
-                  Generate new pairing code
+                  {t("settings.mobile.generateNew")}
                 </Button>
               </div>
             ) : step === "error" ? (
               <div className="flex max-w-52 flex-col items-center gap-3 text-center">
                 <TriangleAlert className="h-6 w-6 text-destructive" />
                 <p className="text-sm text-destructive">
-                  {error ?? "Pairing session ended."}
+                  {error ?? t("settings.mobile.sessionEnded")}
                 </p>
                 <Button
                   data-testid="retry-pairing-button"
@@ -382,7 +387,7 @@ export function MobilePairingCard({
                   size="sm"
                   variant="outline"
                 >
-                  Try again
+                  {t("settings.mobile.tryAgain")}
                 </Button>
               </div>
             ) : step === "idle" ? (
@@ -392,11 +397,11 @@ export function MobilePairingCard({
                   onClick={beginPairing}
                   type="button"
                 >
-                  Start pairing
+                  {t("settings.mobile.startPairing")}
                 </Button>
               ) : (
                 <p className="max-w-44 text-center text-sm text-muted-foreground">
-                  Sign in to generate a mobile pairing code.
+                  {t("settings.mobile.signInToPair")}
                 </p>
               )
             ) : (
@@ -407,7 +412,7 @@ export function MobilePairingCard({
                   data-testid="pairing-loading-spinner"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Starting pairing...
+                  {t("settings.mobile.starting")}
                 </p>
               </div>
             )}
@@ -423,7 +428,7 @@ export function MobilePairingCard({
               variant="outline"
             >
               <Copy className="mr-1.5 h-4 w-4" />
-              Copy pairing code
+              {t("settings.mobile.copyCode")}
             </Button>
           ) : null}
         </SettingsOptionRow>

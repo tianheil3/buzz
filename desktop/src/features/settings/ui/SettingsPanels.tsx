@@ -36,7 +36,7 @@ import {
   useThreadViewMode,
   type ThreadViewMode,
 } from "@/features/channels/lib/threadViewModePreference";
-import { LanguageToggle, useI18n } from "@/shared/i18n";
+import { LanguageToggle, useI18n, type MsgKey } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import {
@@ -53,7 +53,6 @@ import {
   useTheme,
 } from "@/shared/theme/ThemeProvider";
 import {
-  getShellStyle,
   INDEPENDENT_SHELL_THEME_NAMES,
   isIndependentShellThemeName,
 } from "@/shared/theme/shell-styles";
@@ -238,12 +237,18 @@ export const settingsSections: SettingsSectionDescriptor[] = [
   },
 ];
 
-function formatThemeLabel(name: string): string {
+function formatThemeLabel(
+  name: string,
+  t: (key: MsgKey, vars?: Record<string, string | number>) => string,
+): string {
   if (isIndependentShellThemeName(name)) {
-    return getShellStyle(name).label;
+    const shellKey = `appearance.shell.${name}` as MsgKey;
+    return t(shellKey);
   }
   if (name === "buzz" || name === "buzz-dark") {
-    return name === "buzz-dark" ? "Buzz Dark (Raft)" : "Buzz (Raft)";
+    return name === "buzz-dark"
+      ? t("appearance.theme.buzzDarkRaft")
+      : t("appearance.theme.buzzRaft");
   }
   return name
     .split("-")
@@ -257,7 +262,10 @@ function formatThemeLabel(name: string): string {
  * from any position, handling names like "github-light-default", "light-plus",
  * "material-theme-lighter", and "gruvbox-light-soft".
  */
-function pairedThemeLabel(lightName: string): string {
+function pairedThemeLabel(
+  lightName: string,
+  t: (key: MsgKey, vars?: Record<string, string | number>) => string,
+): string {
   const modeTokens = new Set([
     "light",
     "latte",
@@ -267,10 +275,10 @@ function pairedThemeLabel(lightName: string): string {
     "lighter",
     "plus",
   ]);
-  const parts = lightName.split("-").filter((t) => !modeTokens.has(t));
+  const parts = lightName.split("-").filter((token) => !modeTokens.has(token));
   // If stripping removed everything (e.g. "light-plus"), fall back to the raw name
   const base = parts.length > 0 ? parts.join("-") : lightName;
-  return formatThemeLabel(base);
+  return formatThemeLabel(base, t);
 }
 
 /**
@@ -332,6 +340,7 @@ function PairedThemeTile({
   darkVars: ThemePreviewVars | null;
   onSelect: () => void;
 }) {
+  const { t } = useI18n();
   const darkName = getThemePair(lightName);
   return (
     <button
@@ -359,7 +368,7 @@ function PairedThemeTile({
           isActive ? "font-medium text-foreground" : "text-muted-foreground",
         )}
       >
-        {pairedThemeLabel(lightName)}
+        {pairedThemeLabel(lightName, t)}
       </span>
     </button>
   );
@@ -376,6 +385,7 @@ function SingleThemeTile({
   vars: ThemePreviewVars | null;
   onSelect: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <button
       aria-pressed={isActive}
@@ -400,7 +410,7 @@ function SingleThemeTile({
           isActive ? "font-medium text-foreground" : "text-muted-foreground",
         )}
       >
-        {formatThemeLabel(name)}
+        {formatThemeLabel(name, t)}
       </span>
     </button>
   );
