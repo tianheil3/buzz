@@ -420,12 +420,8 @@ function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
           setInstallError(getInstallErrorMessage(result.steps));
         }
       },
-      onError: (error) => {
-        setInstallError(
-          error instanceof Error
-            ? error.message
-            : t("settings.harness.err.install"),
-        );
+      onError: () => {
+        setInstallError(t("settings.harness.err.install"));
       },
     });
   }

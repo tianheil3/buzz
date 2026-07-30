@@ -80,12 +80,8 @@ export function ChannelTemplatesSettingsCard() {
           t("settings.channelTemplates.toast.duplicated", { name: created.name }),
         );
       },
-      onError: (error) => {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : t("settings.channelTemplates.error.duplicate"),
-        );
+      onError: () => {
+        toast.error(t("settings.channelTemplates.error.duplicate"));
       },
     });
   }
@@ -101,12 +97,8 @@ export function ChannelTemplatesSettingsCard() {
         );
         setDeleteTarget(null);
       },
-      onError: (error) => {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : t("settings.channelTemplates.error.delete"),
-        );
+      onError: () => {
+        toast.error(t("settings.channelTemplates.error.delete"));
       },
     });
   }
@@ -393,12 +385,8 @@ function TemplateFormDialog({
           );
           onOpenChange(false);
         },
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : t("settings.channelTemplates.error.update"),
-          );
+        onError: () => {
+          toast.error(t("settings.channelTemplates.error.update"));
         },
       });
     } else {
@@ -416,12 +404,8 @@ function TemplateFormDialog({
           );
           onOpenChange(false);
         },
-        onError: (error) => {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : t("settings.channelTemplates.error.create"),
-          );
+        onError: () => {
+          toast.error(t("settings.channelTemplates.error.create"));
         },
       });
     }

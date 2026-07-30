@@ -847,7 +847,9 @@ function AccentPickerContent({
               key={color.value}
               onClick={() => setAccentColor(color.value)}
               style={{ backgroundColor: swatchColor }}
-              title={color.name}
+              title={t(
+                `appearance.accent.${color.name.toLowerCase()}` as MsgKey,
+              )}
               type="button"
             >
               {accentColor === color.value && (

@@ -123,12 +123,8 @@ function RelayMemberRow({
     try {
       await action();
       toast.success(success);
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t("settings.members.toast.updateFailed"),
-      );
+    } catch {
+      toast.error(t("settings.members.toast.updateFailed"));
     }
   }
 
@@ -355,7 +351,7 @@ export function CommunityMembersSettingsCard({
 
           {membersQuery.error instanceof Error ? (
             <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {membersQuery.error.message}
+              {t("settings.members.err.load")}
             </p>
           ) : null}
 

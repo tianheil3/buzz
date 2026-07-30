@@ -44,18 +44,19 @@ function pairingErrorMessage(
   error: unknown,
   t: (key: import("@/shared/i18n").MsgKey, vars?: Record<string, string | number>) => string,
 ) {
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === "string"
-        ? error
+  const raw =
+    typeof error === "string"
+      ? error
+      : error instanceof Error
+        ? error.toString()
         : "";
 
-  if (message.toLowerCase().includes("timeout waiting for eose")) {
+  if (/timeout waiting for eose/i.test(raw)) {
     return t("settings.mobile.error.timeout");
   }
 
-  return message || t("settings.mobile.error.startFailed");
+  // Never surface raw backend English to the Settings UI.
+  return t("settings.mobile.error.startFailed");
 }
 
 function isPairingSessionTimeout(message: string) {

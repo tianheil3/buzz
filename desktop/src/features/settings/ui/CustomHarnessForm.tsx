@@ -117,7 +117,7 @@ function ArgsEditor({
             <Input
               className={cn(FIELD_INPUT_CLASS, "font-mono")}
               onChange={(e) => set(i, e.target.value)}
-              placeholder={`arg ${i + 1}`}
+              placeholder={t("settings.harness.argPlaceholder", { n: i + 1 })}
               value={arg}
             />
           </FieldShell>
@@ -139,7 +139,7 @@ function ArgsEditor({
         variant="outline"
       >
         <Plus className="mr-1 h-4 w-4" />
-        Add argument
+        {t("settings.harness.addArgument")}
       </Button>
     </div>
   );
@@ -166,7 +166,7 @@ function EnvEditor({
             <Input
               className={cn(FIELD_INPUT_CLASS, "font-mono")}
               onChange={(e) => set(i, "key", e.target.value)}
-              placeholder="KEY"
+              placeholder={t("settings.harness.envKeyPlaceholder")}
               value={pair.key}
             />
           </FieldShell>
@@ -174,7 +174,7 @@ function EnvEditor({
             <Input
               className={cn(FIELD_INPUT_CLASS, "font-mono")}
               onChange={(e) => set(i, "value", e.target.value)}
-              placeholder="value"
+              placeholder={t("settings.harness.envValuePlaceholder")}
               value={pair.value}
             />
           </FieldShell>
@@ -196,7 +196,7 @@ function EnvEditor({
         variant="outline"
       >
         <Plus className="mr-1 h-4 w-4" />
-        Add env var
+        {t("settings.harness.addEnvVar")}
       </Button>
     </div>
   );
@@ -360,7 +360,7 @@ export function CustomHarnessForm({
                 className={cn(FIELD_INPUT_CLASS, "font-mono")}
                 id="ch-id"
                 onChange={field("id")}
-                placeholder="my-runtime"
+                placeholder={t("settings.harness.idPlaceholder")}
                 required
                 value={form.id}
               />
@@ -383,7 +383,7 @@ export function CustomHarnessForm({
               className={cn(FIELD_INPUT_CLASS, "font-mono")}
               id="ch-command"
               onChange={field("command")}
-              placeholder="my-agent-bin"
+              placeholder={t("settings.harness.commandPlaceholder")}
               required
               value={form.command}
             />
@@ -431,7 +431,7 @@ export function CustomHarnessForm({
               className={FIELD_INPUT_CLASS}
               id="ch-docs-url"
               onChange={field("installInstructionsUrl")}
-              placeholder="https://example.com/docs"
+              placeholder={t("settings.harness.docsUrlPlaceholder")}
               value={form.installInstructionsUrl}
             />
           </FieldShell>
@@ -452,7 +452,7 @@ export function CustomHarnessForm({
               className={FIELD_INPUT_CLASS}
               id="ch-install-hint"
               onChange={field("installHint")}
-              placeholder="npm install -g my-harness"
+              placeholder={t("settings.harness.installHintPlaceholder")}
               value={form.installHint}
             />
           </FieldShell>

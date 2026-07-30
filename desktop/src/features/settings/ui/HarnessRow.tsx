@@ -219,7 +219,15 @@ function RuntimeActions({
       {isWorking ? (
         <div className="flex h-7 w-9 items-center justify-center text-muted-foreground">
           <Spinner
-            aria-label={`${runtime.label} ${isInstalling ? "installing" : "connecting"}`}
+            aria-label={
+              isInstalling
+                ? t("settings.harness.installingAria", {
+                    name: runtime.label,
+                  })
+                : t("settings.harness.connectingAria", {
+                    name: runtime.label,
+                  })
+            }
             className="h-4 w-4 border-2"
             data-testid={`doctor-runtime-loading-${runtime.id}`}
           />
@@ -362,10 +370,10 @@ export function HarnessRow({
           });
         }
       },
-      onError: (error) => {
+      onError: () => {
         setInstallResult({
           success: false,
-          error: error instanceof Error ? error.message : t("settings.harness.err.install"),
+          error: t("settings.harness.err.install"),
         });
       },
     });
@@ -384,17 +392,11 @@ export function HarnessRow({
   const connectionError = connectMutation.error
     ? t("settings.harness.couldNotConnect", {
         name: runtime.label,
-        error:
-          connectMutation.error instanceof Error
-            ? connectMutation.error.message
-            : t("settings.harness.connectionFailed"),
+        error: t("settings.harness.connectionFailed"),
       })
     : authMethodsQuery.error
       ? t("settings.harness.couldNotLoadSignIn", {
-          error:
-            authMethodsQuery.error instanceof Error
-              ? authMethodsQuery.error.message
-              : t("settings.harness.requestFailed"),
+          error: t("settings.harness.requestFailed"),
         })
       : null;
 

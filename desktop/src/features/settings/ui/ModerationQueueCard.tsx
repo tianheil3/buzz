@@ -440,19 +440,15 @@ function QueueTab() {
           ? t("settings.moderation.toast.dismissed")
           : t("settings.moderation.toast.resolved"),
       );
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t("settings.moderation.err.resolveFailed"),
-      );
+    } catch {
+      toast.error(t("settings.moderation.err.resolveFailed"));
     }
   }
 
   if (reportsQuery.error instanceof Error) {
     return (
       <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-        {reportsQuery.error.message}
+        {t("settings.moderation.err.loadReports")}
       </p>
     );
   }
@@ -552,7 +548,7 @@ function AuditTab() {
   if (auditQuery.error instanceof Error) {
     return (
       <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-        {auditQuery.error.message}
+        {t("settings.moderation.err.loadAudit")}
       </p>
     );
   }

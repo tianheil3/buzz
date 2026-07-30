@@ -74,12 +74,8 @@ export function CustomEmojiSettingsCard() {
       if (suggested && name.trim().length === 0) {
         setName(suggested);
       }
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t("settings.customEmoji.toast.uploadFailed"),
-      );
+    } catch {
+      toast.error(t("settings.customEmoji.toast.uploadFailed"));
     } finally {
       setIsUploading(false);
     }
@@ -95,12 +91,8 @@ export function CustomEmojiSettingsCard() {
       setName("");
       setPendingUpload(null);
       toast.success(t("settings.customEmoji.toast.added", { code: stored }));
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : t("settings.customEmoji.toast.addFailed"),
-      );
+    } catch {
+      toast.error(t("settings.customEmoji.toast.addFailed"));
     }
   }, [normalized, pendingUpload, setEmoji, t]);
 
@@ -116,12 +108,8 @@ export function CustomEmojiSettingsCard() {
         toast.success(
           t("settings.customEmoji.toast.removed", { code: shortcode }),
         );
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : t("settings.customEmoji.toast.removeFailed"),
-        );
+      } catch {
+        toast.error(t("settings.customEmoji.toast.removeFailed"));
       }
     },
     [removeEmoji, t],

@@ -4,7 +4,10 @@
  * and required bilingual keys must exist.
  *
  * SETTINGS_RENDER_PATHS mirrors the imports + switch cases in SettingsPanels.tsx
- * rather than a hand-curated residual list.
+ * plus nested Settings UI that ships owner-visible copy.
+ *
+ * In addition to residual forbidden-literal lists, this suite scans each entry
+ * for direct UI string attributes / JSX text / raw error.message leaks.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -152,12 +155,23 @@ const FORBIDDEN_LITERALS = [
   "Made community admin",
   "Remove from community",
   "Couldn't update this community member.",
+  // Round 4 residual (QA 20:26) — full UI phrases only (avoid key-id false positives)
+  "Add argument",
+  "Add env var",
+  "north-star",
+  "npub1…",
+  "my-runtime",
+  "my-agent-bin",
+  "https://example.com/docs",
+  "npm install -g my-harness",
 ];
 
 const REQUIRED_KEYS = [
   "appearance.theme.buzzRaft",
   "appearance.theme.buzzDarkRaft",
   "appearance.shell.persona5max",
+  "appearance.accent.neutral",
+  "appearance.accent.blue",
   "settings.channelTemplates.createTitle",
   "settings.channelTemplates.toast.duplicated",
   "settings.mobile.pairTitle",
@@ -165,15 +179,27 @@ const REQUIRED_KEYS = [
   "settings.hosted.signInBuilderlab",
   "settings.hosted.connectIdentity",
   "settings.hosted.transferTitle",
+  "settings.hosted.namePlaceholder",
+  "settings.hosted.npubPlaceholder",
   "settings.moderation.action.delete",
   "settings.moderation.toast.dismissed",
   "settings.moderation.err.noChannel",
+  "settings.moderation.err.loadReports",
+  "settings.moderation.err.loadAudit",
   "settings.notifications.desktopAlerts",
   "settings.notifications.slot.dm",
   "settings.profile.profileInfo",
+  "settings.profile.err.load",
+  "settings.profile.err.save",
   "settings.signOut.deleteData",
   "settings.feedback.send",
   "settings.harness.addRuntimes",
+  "settings.harness.addArgument",
+  "settings.harness.addEnvVar",
+  "settings.harness.argPlaceholder",
+  "settings.harness.installingAria",
+  "settings.harness.connectingAria",
+  "settings.harness.err.load",
   "settings.updates.check",
   "settings.updates.sidebar.readyTitle",
   // Round 3 paths
@@ -189,11 +215,25 @@ const REQUIRED_KEYS = [
   "settings.compute.shareMachine",
   "settings.members.title",
   "settings.members.search",
+  "settings.members.err.load",
   "settings.shortcuts.cat.Navigation",
   "settings.shortcuts.item.quick-search.label",
   "settings.experiments.feature.workflows.name",
   "settings.sound.previewAria",
 ];
+
+/** Keys whose en/zh values are intentionally identical (brand / protocol samples). */
+const ALLOW_SAME_EN_ZH = new Set([
+  "appearance.shell.persona5max",
+  "appearance.shell.persona5",
+  "settings.customEmoji.namePlaceholder",
+  "settings.hosted.namePlaceholder",
+  "settings.hosted.npubPlaceholder",
+  "settings.harness.idPlaceholder",
+  "settings.harness.commandPlaceholder",
+  "settings.harness.docsUrlPlaceholder",
+  "settings.harness.installHintPlaceholder",
+]);
 
 function isCommentOrDocLine(line) {
   const trimmed = line.trimStart();
@@ -205,17 +245,126 @@ function isCommentOrDocLine(line) {
   );
 }
 
+function isAllowedHardcodedAttr(line) {
+  return (
+    line.includes("data-testid") ||
+    line.includes("data-") ||
+    line.includes("SIGNOUT_CONFIRM_PHRASE") ||
+    line.includes("FORBIDDEN") ||
+    line.includes("FEEDBACK_CATEGORY_LABELS") ||
+    // typed confirmation / stable test ids may keep English constants
+    line.includes("htmlFor=") ||
+    line.includes("id=") ||
+    line.includes("type=") ||
+    line.includes("name=") ||
+    line.includes("autoComplete=") ||
+    line.includes("role=") ||
+    line.includes("href=") ||
+    line.includes("src=") ||
+    line.includes("to=") ||
+    line.includes("key=")
+  );
+}
+
+/**
+ * Detect direct user-visible string attributes that bypass t().
+ * Catches: placeholder="…", title="…", aria-label="…", and
+ * template-literal forms without t( such as `arg ${i}`.
+ */
+function findHardcodedUiAttrs(src) {
+  const offenders = [];
+  const lines = src.split("\n");
+  const attrRe =
+    /\b(placeholder|title|aria-label|aria-description|aria-placeholder)\s*=\s*(["'`])([\s\S]*?)\2/g;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isCommentOrDocLine(line) || isAllowedHardcodedAttr(line)) continue;
+    // static quoted attribute
+    for (const m of line.matchAll(
+      /\b(placeholder|title|aria-label|aria-description)\s*=\s*(["'])([^"']+)\2/g,
+    )) {
+      const value = m[3].trim();
+      if (!value) continue;
+      // pure symbols / numbers / CSS-ish only
+      if (!/[A-Za-z\u4e00-\u9fff]/.test(value)) continue;
+      offenders.push(`${i + 1}: ${line.trim()}`);
+    }
+    // template literal without t( on the same line — e.g. `arg ${i+1}`
+    if (
+      /\b(placeholder|title|aria-label|aria-description)\s*=\s*\{`/.test(line) &&
+      !line.includes("t(")
+    ) {
+      offenders.push(`${i + 1}: ${line.trim()}`);
+    }
+    void attrRe;
+  }
+  return offenders;
+}
+
+/**
+ * Detect JSX text children that look like English UI sentences/buttons.
+ * e.g. >Add argument</Button>
+ */
+function findHardcodedJsxText(src) {
+  const offenders = [];
+  const lines = src.split("\n");
+  const re = />([A-Z][A-Za-z0-9][A-Za-z0-9 ,.'’!?:;()/%+\-]{1,})</g;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isCommentOrDocLine(line)) continue;
+    // skip type annotations / generics noise
+    if (line.includes("extends ") || line.includes("import ")) continue;
+    for (const m of line.matchAll(re)) {
+      const text = m[1].trim();
+      // skip short technical tokens (IDs, single words that are keys)
+      if (text.length < 3) continue;
+      if (/^[A-Z][a-z]+[A-Z]/.test(text)) continue; // CamelCase identifiers
+      if (/^(Error|React|HTML|URL|JSON|ACP|PATH|ID)$/.test(text)) continue;
+      offenders.push(`${i + 1}: ${line.trim()}`);
+    }
+  }
+  return offenders;
+}
+
+/** Raw Error.message must not be rendered as Settings UI copy. */
+function findErrorMessageLeaks(src) {
+  const offenders = [];
+  const lines = src.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (isCommentOrDocLine(line)) continue;
+    // allow reading message for control-flow mapping (includes / startsWith) only
+    // when not used as UI value — still ban common UI patterns.
+    if (
+      /\.error\.message\b/.test(line) ||
+      (/\berror\.message\b/.test(line) &&
+        (line.includes("toast.") ||
+          line.includes("setError") ||
+          line.includes("setInstall") ||
+          line.includes("{error.message}") ||
+          line.includes("? error.message") ||
+          line.includes(": error.message")))
+    ) {
+      // timeout mapping that only inspects message is OK if not returned
+      if (
+        line.includes(".includes(") ||
+        line.includes(".toLowerCase()") ||
+        line.includes("message.toLowerCase")
+      ) {
+        continue;
+      }
+      offenders.push(`${i + 1}: ${line.trim()}`);
+    }
+  }
+  return offenders;
+}
+
 describe("settings i18n path coverage (TIA-423)", () => {
   it("required path keys exist in en and zh with real translations", () => {
-    const allowSame = new Set([
-      "appearance.shell.persona5max",
-      "appearance.shell.persona5",
-      "settings.customEmoji.namePlaceholder",
-    ]);
     for (const key of REQUIRED_KEYS) {
       assert.ok(key in messages.en, `missing en key ${key}`);
       assert.ok(key in messages.zh, `missing zh key ${key}`);
-      if (!allowSame.has(key)) {
+      if (!ALLOW_SAME_EN_ZH.has(key)) {
         assert.notEqual(
           messages.en[key],
           messages.zh[key],
@@ -251,7 +400,9 @@ describe("settings i18n path coverage (TIA-423)", () => {
             // (SettingsView uses SETTINGS_SECTION_LABEL_KEYS + t())
             !line.includes('label: "') &&
             // Kind group English labels remain as stable keys in data modules
-            !rel.includes("localArchiveKinds"),
+            !rel.includes("localArchiveKinds") &&
+            // message table values live only in messages.ts, not here
+            !line.includes("messages."),
         );
         assert.equal(
           offenders.length,
@@ -259,6 +410,42 @@ describe("settings i18n path coverage (TIA-423)", () => {
           `${rel} still hard-codes ${JSON.stringify(literal)}:\n${offenders.join("\n")}`,
         );
       }
+    }
+  });
+
+  it("nested Settings UI has no direct hardcoded UI attributes", () => {
+    for (const rel of SETTINGS_RENDER_PATHS) {
+      const src = readFileSync(join(desktopSrc, rel), "utf8");
+      const offenders = findHardcodedUiAttrs(src);
+      assert.equal(
+        offenders.length,
+        0,
+        `${rel} has hardcoded UI attrs (use t()):\n${offenders.join("\n")}`,
+      );
+    }
+  });
+
+  it("nested Settings UI has no direct English JSX text children", () => {
+    for (const rel of SETTINGS_RENDER_PATHS) {
+      const src = readFileSync(join(desktopSrc, rel), "utf8");
+      const offenders = findHardcodedJsxText(src);
+      assert.equal(
+        offenders.length,
+        0,
+        `${rel} has hardcoded JSX text (use t()):\n${offenders.join("\n")}`,
+      );
+    }
+  });
+
+  it("Settings paths do not surface raw error.message as UI copy", () => {
+    for (const rel of SETTINGS_RENDER_PATHS) {
+      const src = readFileSync(join(desktopSrc, rel), "utf8");
+      const offenders = findErrorMessageLeaks(src);
+      assert.equal(
+        offenders.length,
+        0,
+        `${rel} leaks error.message into UI (use t() fallback):\n${offenders.join("\n")}`,
+      );
     }
   });
 

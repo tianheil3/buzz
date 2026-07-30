@@ -193,7 +193,7 @@ export function HarnessesSettingsPanel() {
 
           {runtimesQuery.error instanceof Error ? (
             <p className="mt-3 rounded-2xl bg-destructive/10 px-4 py-4 text-sm text-destructive">
-              {runtimesQuery.error.message}
+              {t("settings.harness.err.load")}
             </p>
           ) : null}
 

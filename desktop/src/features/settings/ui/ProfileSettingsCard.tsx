@@ -591,13 +591,13 @@ export function ProfileSettingsCard({
         <div className="space-y-3">
           {profileQuery.error instanceof Error ? (
             <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {profileQuery.error.message}
+              {t("settings.profile.err.load")}
             </p>
           ) : null}
 
           {updateProfileMutation.error instanceof Error ? (
             <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {updateProfileMutation.error.message}
+              {t("settings.profile.err.save")}
             </p>
           ) : null}
 

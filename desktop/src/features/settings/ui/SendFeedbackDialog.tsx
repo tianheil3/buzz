@@ -135,10 +135,8 @@ export function SendFeedbackDialog({
     setErrorMessage(null);
     try {
       await onAttachImage();
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : t("settings.feedback.err.attach"),
-      );
+    } catch {
+      setErrorMessage(t("settings.feedback.err.attach"));
     }
   }
 
@@ -150,10 +148,8 @@ export function SendFeedbackDialog({
     try {
       await onSubmit({ category, includeLogs, message: message.trim() });
       onOpenChange(false);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : t("settings.feedback.err.send"),
-      );
+    } catch {
+      setErrorMessage(t("settings.feedback.err.send"));
     }
   }
 

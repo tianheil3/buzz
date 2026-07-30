@@ -633,7 +633,7 @@ export function HostedCommunitiesSettingsCard() {
                   setName(event.target.value.toLowerCase());
                   setAvailability(null);
                 }}
-                placeholder="north-star"
+                placeholder={t("settings.hosted.namePlaceholder")}
                 spellCheck={false}
                 value={name}
               />
@@ -909,7 +909,7 @@ function TransferOwnershipDialog({
             aria-label={t("settings.hosted.recipientNpub")}
             autoComplete="off"
             className="font-mono text-sm"
-            placeholder="npub1…"
+            placeholder={t("settings.hosted.npubPlaceholder")}
             spellCheck={false}
             value={npub}
             onChange={(event) => setNpub(event.target.value.trim())}
