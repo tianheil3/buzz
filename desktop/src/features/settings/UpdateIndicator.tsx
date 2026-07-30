@@ -2,6 +2,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type { ComponentType } from "react";
 import { ExternalLink, RefreshCcw, RotateCw } from "lucide-react";
 
+import { useI18n, type MsgKey } from "@/shared/i18n";
 import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shared/ui/tooltip";
@@ -17,46 +18,52 @@ type IndicatorIcon = ComponentType<{
   className?: string;
 }>;
 
-const variants: Record<
-  "available" | "downloading" | "installing" | "manual-required" | "ready",
+type VariantKey =
+  | "available"
+  | "downloading"
+  | "installing"
+  | "manual-required"
+  | "ready";
+
+const VARIANT_META: Record<
+  VariantKey,
   {
     Icon: IndicatorIcon;
     iconClassName?: string;
-    label: string;
+    labelKey: MsgKey;
     badgeColor: string;
   }
 > = {
   available: {
     Icon: RefreshCcw,
-    label: "Update available",
+    labelKey: "settings.updates.indicator.available",
     badgeColor: "bg-primary",
   },
   downloading: {
     Icon: Spinner,
     iconClassName: "h-4 w-4 border-2",
-    label: "Downloading update\u2026",
+    labelKey: "settings.updates.indicator.downloading",
     badgeColor: "bg-primary",
   },
   installing: {
     Icon: Spinner,
     iconClassName: "h-4 w-4 border-2",
-    label: "Installing update\u2026",
+    labelKey: "settings.updates.indicator.installing",
     badgeColor: "bg-primary",
   },
   "manual-required": {
     Icon: ExternalLink,
-    label:
-      "Update available — download from GitHub (use AppImage for auto-updates)",
+    labelKey: "settings.updates.indicator.manual",
     badgeColor: "bg-primary",
   },
   ready: {
     Icon: RotateCw,
-    label: "Update now",
+    labelKey: "settings.updates.indicator.ready",
     badgeColor: "bg-emerald-500",
   },
 };
 
-function getVariant(state: UpdateStatus["state"]) {
+function getVariantKey(state: UpdateStatus["state"]): VariantKey | null {
   if (
     state === "available" ||
     state === "downloading" ||
@@ -64,20 +71,27 @@ function getVariant(state: UpdateStatus["state"]) {
     state === "manual-required" ||
     state === "ready"
   ) {
-    return variants[state];
+    return state;
   }
   return null;
 }
 
 export function UpdateIndicator({ className }: { className?: string }) {
+  const { t } = useI18n();
   const { status, installAndRelaunch } = useUpdaterContext();
-  const variant = getVariant(status.state);
+  const variantKey = getVariantKey(status.state);
 
-  if (!variant) {
+  if (!variantKey) {
     return null;
   }
 
-  const { Icon, iconClassName = "h-4 w-4", label, badgeColor } = variant;
+  const {
+    Icon,
+    iconClassName = "h-4 w-4",
+    labelKey,
+    badgeColor,
+  } = VARIANT_META[variantKey];
+  const label = t(labelKey);
   const isActionable =
     status.state === "ready" || status.state === "manual-required";
   const handleClick =

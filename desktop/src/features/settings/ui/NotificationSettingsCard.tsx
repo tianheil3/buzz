@@ -8,19 +8,40 @@ import type {
 import {
   COMING_SOON_SLOTS,
   RECOMMENDED_SOUND_BY_SLOT,
-  SLOT_DESCRIPTIONS,
-  SLOT_LABELS,
   SOUND_SLOTS,
   type SoundName,
   type SoundSlot,
 } from "@/features/notifications/lib/sound";
-import { useI18n } from "@/shared/i18n";
+import { useI18n, type MsgKey } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui/button";
 import { Switch } from "@/shared/ui/switch";
 import { SettingsOptionGroup, SettingsOptionRow } from "./SettingsOptionGroup";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
 import { SoundPicker } from "./SoundPicker";
+
+const SLOT_LABEL_KEYS: Record<SoundSlot, MsgKey> = {
+  dm: "settings.notifications.slot.dm",
+  mention: "settings.notifications.slot.mention",
+  thread_reply: "settings.notifications.slot.thread_reply",
+  needs_action: "settings.notifications.slot.needs_action",
+  job_accepted: "settings.notifications.slot.job_accepted",
+  job_progress: "settings.notifications.slot.job_progress",
+  job_result: "settings.notifications.slot.job_result",
+  job_error: "settings.notifications.slot.job_error",
+};
+
+const SLOT_DESC_KEYS: Record<SoundSlot, MsgKey> = {
+  dm: "settings.notifications.slotDesc.dm",
+  mention: "settings.notifications.slotDesc.mention",
+  thread_reply: "settings.notifications.slotDesc.thread_reply",
+  needs_action: "settings.notifications.slotDesc.needs_action",
+  job_accepted: "settings.notifications.slotDesc.job_accepted",
+  job_progress: "settings.notifications.slotDesc.job_progress",
+  job_result: "settings.notifications.slotDesc.job_result",
+  job_error: "settings.notifications.slotDesc.job_error",
+};
+
 
 export function NotificationSettingsCard({
   isUpdatingDesktopNotifications,
@@ -70,12 +91,12 @@ export function NotificationSettingsCard({
 
       <span className="sr-only" data-testid="notifications-desktop-state">
         {notificationPermission === "unsupported"
-          ? "Unavailable"
+          ? t("settings.notifications.state.unavailable")
           : notificationPermission === "denied"
-            ? "Blocked"
+            ? t("settings.notifications.state.blocked")
             : notificationSettings.desktopEnabled
-              ? "On"
-              : "Off"}
+              ? t("settings.notifications.state.on")
+              : t("settings.notifications.state.off")}
       </span>
 
       <div className="flex flex-col gap-4">
@@ -87,13 +108,13 @@ export function NotificationSettingsCard({
                 htmlFor="desktop-alerts-switch"
               >
                 {isUpdatingDesktopNotifications
-                  ? "Requesting..."
-                  : "Desktop alerts"}
+                  ? t("settings.notifications.requesting")
+                  : t("settings.notifications.desktopAlerts")}
               </label>
               <p className="text-sm font-normal text-muted-foreground">
                 {notificationSettings.desktopEnabled
-                  ? "Native desktop alerts are enabled for the categories you have armed below."
-                  : "Request OS permission and surface new mentions or needs-action items outside the app."}
+                  ? t("settings.notifications.desktopEnabledDesc")
+                  : t("settings.notifications.desktopDisabledDesc")}
               </p>
             </div>
             <Switch
@@ -113,11 +134,10 @@ export function NotificationSettingsCard({
                 className="text-sm font-medium"
                 htmlFor="notify-while-viewing-switch"
               >
-                Notify while viewing
+                {t("settings.notifications.notifyWhileViewing")}
               </label>
               <p className="text-sm font-normal text-muted-foreground">
-                Also alert for direct messages in the conversation you have
-                open.
+                {t("settings.notifications.notifyWhileViewingDesc")}
               </p>
             </div>
             <Switch
@@ -144,10 +164,10 @@ export function NotificationSettingsCard({
                     className="text-sm font-medium"
                     htmlFor="notification-sound-switch"
                   >
-                    Sound
+                    {t("settings.notifications.sound")}
                   </label>
                   <p className="text-sm font-normal text-muted-foreground">
-                    Alert with a sound for the events below.
+                    {t("settings.notifications.soundDesc")}
                   </p>
                 </div>
                 <Switch
@@ -178,15 +198,15 @@ export function NotificationSettingsCard({
                       >
                         <div className="min-w-0">
                           <span className="flex items-center gap-2 text-sm font-medium">
-                            {SLOT_LABELS[slot]}
+                            {t(SLOT_LABEL_KEYS[slot])}
                             {comingSoon ? (
                               <span className="rounded-full bg-muted/70 px-2 py-0.5 text-2xs font-normal uppercase tracking-wide text-muted-foreground">
-                                Coming soon
+                                {t("settings.notifications.comingSoon")}
                               </span>
                             ) : null}
                           </span>
                           <p className="text-sm font-normal text-muted-foreground">
-                            {SLOT_DESCRIPTIONS[slot]}
+                            {t(SLOT_DESC_KEYS[slot])}
                           </p>
                         </div>
                         <span className="flex items-center gap-3">
@@ -229,12 +249,12 @@ export function NotificationSettingsCard({
                     {showComingSoon ? (
                       <>
                         <ChevronUp className="h-4 w-4" />
-                        Show less
+                        {t("settings.notifications.showLess")}
                       </>
                     ) : (
                       <>
                         <ChevronDown className="h-4 w-4" />
-                        View all
+                        {t("settings.notifications.viewAll")}
                       </>
                     )}
                   </Button>
@@ -251,11 +271,10 @@ export function NotificationSettingsCard({
                 className="text-sm font-medium"
                 htmlFor="home-badge-switch"
               >
-                Home badge
+                {t("settings.notifications.homeBadge")}
               </label>
               <p className="text-sm font-normal text-muted-foreground">
-                Show a Home badge for mentions and needs-action items in the
-                sidebar.
+                {t("settings.notifications.homeBadgeDesc")}
               </p>
             </div>
             <Switch
@@ -273,8 +292,8 @@ export function NotificationSettingsCard({
       {permissionBlocked && (
         <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {notificationPermission === "unsupported"
-            ? "Desktop notifications are not supported in this environment."
-            : "Desktop notifications are blocked. Enable them in your system settings."}
+            ? t("settings.notifications.unsupported")
+            : t("settings.notifications.blockedSystem")}
         </p>
       )}
 

@@ -29,6 +29,7 @@ import { Dialog } from "@/shared/ui/dialog";
 import { Input } from "@/shared/ui/input";
 import { Skeleton } from "@/shared/ui/skeleton";
 import { Spinner } from "@/shared/ui/spinner";
+import { useI18n, type MsgKey } from "@/shared/i18n";
 
 import { CustomHarnessForm } from "./CustomHarnessForm";
 import { harnessDescription } from "./harnessCatalogCopy";
@@ -42,7 +43,7 @@ import {
   installLinkLabel,
 } from "./harnessCatalogLogic";
 
-/** Sentinel list selection for the "+ Custom harness" entry. */
+/** Sentinel list selection for the custom-form catalog entry. */
 const CUSTOM_ENTRY_ID = "\u0000custom";
 
 /**
@@ -60,6 +61,7 @@ export function HarnessCatalogDialog({
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }) {
+  const { t } = useI18n();
   const contentRef = React.useRef<HTMLDivElement | null>(null);
   const runtimesQuery = useAcpRuntimesQuery();
   const isLoading = runtimesQuery.isLoading;
@@ -126,7 +128,7 @@ export function HarnessCatalogDialog({
         scrollAreaClassName="flex min-h-0 overflow-hidden px-0"
         scrollAreaTestId="harness-catalog-dialog-body"
         tabIndex={-1}
-        title="Add runtimes"
+        title={t("settings.harness.addRuntimes")}
       >
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-sidebar sm:flex-row">
           {/* Left: search + chooser list */}
@@ -135,11 +137,11 @@ export function HarnessCatalogDialog({
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sidebar-foreground/50" />
                 <Input
-                  aria-label="Search runtimes"
+                  aria-label={t("settings.harness.searchRuntimes")}
                   className="h-8 border-sidebar-border bg-sidebar-accent/40 pl-8 text-sm"
                   data-testid="harness-catalog-search"
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search runtimes…"
+                  placeholder={t("settings.harness.searchPlaceholder")}
                   value={query}
                 />
               </div>
@@ -153,14 +155,14 @@ export function HarnessCatalogDialog({
                   <CatalogListSkeleton />
                 ) : filtered.length === 0 ? (
                   <p className="px-4 py-2 text-sm text-sidebar-foreground/60">
-                    No runtimes match.
+                    {t("settings.harness.noMatch")}
                   </p>
                 ) : (
                   <>
                     {groups.setup.length > 0 ? (
                       <CatalogSection
                         count={groups.setup.length}
-                        label="Setup"
+                        label={t("settings.harness.setup")}
                         onToggle={() => setSetupOpen((v) => !v)}
                         open={setupExpanded}
                         testId="harness-catalog-section-setup"
@@ -178,7 +180,7 @@ export function HarnessCatalogDialog({
                     {groups.installed.length > 0 ? (
                       <CatalogSection
                         count={groups.installed.length}
-                        label="Installed"
+                        label={t("settings.harness.installed")}
                         onToggle={() => setInstalledOpen((v) => !v)}
                         open={installedExpanded}
                         testId="harness-catalog-section-installed"
@@ -213,7 +215,7 @@ export function HarnessCatalogDialog({
               >
                 <Plus className="h-4 w-4 shrink-0" />
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  Custom harness
+                  {t("settings.harness.customHarness")}
                 </span>
               </button>
             </div>
@@ -237,7 +239,7 @@ export function HarnessCatalogDialog({
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
                   <div className="flex min-h-80 items-center justify-center rounded-lg border border-dashed border-border/70 px-6 text-center">
                     <p className="max-w-sm text-sm text-muted-foreground">
-                      Select a runtime on the left, or add a custom one.
+                      {t("settings.harness.selectHint")}
                     </p>
                   </div>
                 </div>
@@ -301,10 +303,11 @@ function CatalogSection({
 
 /** Pulsing placeholder rows shown while harness discovery is running. */
 function CatalogListSkeleton() {
+  const { t } = useI18n();
   const widths = ["w-24", "w-32", "w-20", "w-28", "w-24", "w-16"];
   return (
     <div
-      aria-label="Loading runtimes"
+      aria-label={t("settings.harness.loadingRuntimes")}
       className="space-y-1"
       data-testid="harness-catalog-list-skeleton"
       role="status"
@@ -326,9 +329,10 @@ function CatalogListSkeleton() {
 
 /** Pulsing placeholder mirroring the detail-pane layout while loading. */
 function CatalogDetailSkeleton() {
+  const { t } = useI18n();
   return (
     <div
-      aria-label="Loading runtime details"
+      aria-label={t("settings.harness.loadingDetails")}
       className="flex min-h-full flex-col gap-6"
       data-testid="harness-catalog-detail-skeleton"
       role="status"
@@ -360,6 +364,7 @@ function CatalogListItem({
   isCurrent: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useI18n();
   const isReady = entry.availability === "available";
 
   return (
@@ -381,7 +386,7 @@ function CatalogListItem({
       </span>
       {isReady ? (
         <span
-          aria-label={`${entry.label} is ready`}
+          aria-label={t("settings.harness.readyAria", { name: entry.label })}
           className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"
           role="img"
         />
@@ -391,12 +396,19 @@ function CatalogListItem({
 }
 
 function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
+  const { t } = useI18n();
   const install = useInstallAcpRuntimeMutation();
   const [installError, setInstallError] = React.useState<string | null>(null);
   const [isUpdateWarningOpen, setIsUpdateWarningOpen] = React.useState(false);
   const action = catalogPrimaryAction(entry);
-  const statusLabel = entryStatusLabel(entry);
-  const description = harnessDescription(entry.id);
+  const statusLabelKey = entryStatusLabel(entry);
+  const statusLabel = statusLabelKey
+    ? t(statusLabelKey as MsgKey)
+    : null;
+  const descriptionKey = harnessDescription(entry.id);
+  const description = descriptionKey
+    ? t(descriptionKey as MsgKey)
+    : null;
   const isReady = entry.availability === "available";
   const docsUrl = entry.installInstructionsUrl.trim();
 
@@ -410,7 +422,9 @@ function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
       },
       onError: (error) => {
         setInstallError(
-          error instanceof Error ? error.message : "Install failed.",
+          error instanceof Error
+            ? error.message
+            : t("settings.harness.err.install"),
         );
       },
     });
@@ -441,7 +455,7 @@ function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
         type="button"
       >
         {install.isPending ? <Spinner className="mr-2 h-3.5 w-3.5" /> : null}
-        {action.label}
+        {t(action.label as MsgKey)}
       </Button>
     ) : docsUrl ? (
       <Button
@@ -455,7 +469,11 @@ function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
         variant={action.kind === "docs" ? "default" : "outline"}
       >
         <ExternalLink className="mr-1 h-3.5 w-3.5" />
-        {action.kind === "docs" ? action.label : installLinkLabel(entry)}
+        {t(
+          (action.kind === "docs"
+            ? action.label
+            : installLinkLabel(entry)) as MsgKey,
+        )}
       </Button>
     ) : null;
 
@@ -481,7 +499,7 @@ function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
               </span>
             ) : isReady ? (
               <span className="mt-1 inline-flex items-center rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                Ready
+                {t("settings.harness.ready")}
               </span>
             ) : null}
           </div>
@@ -495,7 +513,9 @@ function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
 
         {entry.installHint ? (
           <div className="space-y-1">
-            <p className="text-xs font-semibold text-muted-foreground">Setup</p>
+            <p className="text-xs font-semibold text-muted-foreground">
+              {t("settings.harness.setup")}
+            </p>
             <p className="whitespace-pre-line text-sm leading-6 text-foreground">
               {entry.installHint}
             </p>
@@ -518,7 +538,7 @@ function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
               className="text-xs text-muted-foreground/80"
               data-testid={`harness-catalog-ready-hint-${entry.id}`}
             >
-              Already set up
+              {t("settings.harness.alreadySetUp")}
             </p>
           ) : null}
           {primaryCta}
@@ -530,18 +550,27 @@ function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Update {entry.label} adapter?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("settings.harness.updateAdapterTitle", {
+                name: entry.label,
+              })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {adapterUpdateWarning(entry)}
+              {(() => {
+                const warning = adapterUpdateWarning(entry);
+                return warning.key === "settings.harness.warning.generic"
+                  ? t(warning.key, warning.vars)
+                  : t(warning.key);
+              })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               data-testid={`harness-catalog-confirm-update-${entry.id}`}
               onClick={handleInstall}
             >
-              Update
+              {t("settings.harness.update")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -551,19 +580,42 @@ function CatalogDetail({ entry }: { entry: AcpRuntimeCatalogEntry }) {
 }
 
 function TechnicalDetails({ entry }: { entry: AcpRuntimeCatalogEntry }) {
+  const { t } = useI18n();
   const rows: Array<{ label: string; value: string }> = [
-    { label: "ID", value: entry.id },
-    ...(entry.command ? [{ label: "Command", value: entry.command }] : []),
+    { label: t("settings.harness.technical.id"), value: entry.id },
+    ...(entry.command
+      ? [{ label: t("settings.harness.technical.command"), value: entry.command }]
+      : []),
     ...(entry.defaultArgs.length > 0
-      ? [{ label: "Arguments", value: entry.defaultArgs.join(" ") }]
+      ? [
+          {
+            label: t("settings.harness.technical.arguments"),
+            value: entry.defaultArgs.join(" "),
+          },
+        ]
       : []),
     ...(entry.underlyingCliPath
-      ? [{ label: "Underlying CLI", value: entry.underlyingCliPath }]
+      ? [
+          {
+            label: t("settings.harness.technical.cli"),
+            value: entry.underlyingCliPath,
+          },
+        ]
       : []),
-    ...(entry.binaryPath ? [{ label: "Path", value: entry.binaryPath }] : []),
+    ...(entry.binaryPath
+      ? [
+          {
+            label: t("settings.harness.technical.path"),
+            value: entry.binaryPath,
+          },
+        ]
+      : []),
     {
-      label: "Source",
-      value: entry.source === "builtin" ? "Built-in" : "Bundled preset",
+      label: t("settings.harness.technical.source"),
+      value:
+        entry.source === "builtin"
+          ? t("settings.harness.source.builtin")
+          : t("settings.harness.source.bundled"),
     },
   ];
 
@@ -587,6 +639,7 @@ function TechnicalDetails({ entry }: { entry: AcpRuntimeCatalogEntry }) {
 }
 
 function CustomHarnessDetail({ onDone }: { onDone: () => void }) {
+  const { t } = useI18n();
   return (
     <div
       className="flex min-h-0 flex-1 flex-col"
@@ -597,10 +650,10 @@ function CustomHarnessDetail({ onDone }: { onDone: () => void }) {
         header={
           <div>
             <h3 className="text-xl font-semibold leading-snug">
-              Custom harness
+              {t("settings.harness.customTitle")}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Register any ACP-speaking agent tool as a selectable runtime.
+              {t("settings.harness.customDesc")}
             </p>
           </div>
         }

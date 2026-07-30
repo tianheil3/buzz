@@ -59,6 +59,8 @@ function IdentityRow({
   testId: string;
   copyValue?: string;
 }) {
+  const { t } = useI18n();
+  const copyLabel = t("settings.profile.copyLabel", { label });
   return (
     <div className="flex min-h-16 items-center justify-between gap-4 px-4 py-3">
       <div className="min-w-0 space-y-1">
@@ -73,18 +75,18 @@ function IdentityRow({
       </div>
       {copyValue ? (
         <button
-          aria-label={`Copy ${label}`}
+          aria-label={copyLabel}
           className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           data-testid={`copy-${testId}`}
           onClick={async () => {
             await writeTextToClipboard(copyValue);
-            toast.success("Copied to clipboard");
+            toast.success(t("common.copied"));
           }}
-          title={`Copy ${label}`}
+          title={copyLabel}
           type="button"
         >
           <Copy className="h-4 w-4 shrink-0" />
-          Copy
+          {t("settings.profile.copy")}
         </button>
       ) : null}
     </div>
@@ -96,6 +98,7 @@ function IdentityRow({
  * The nsec is fetched only when first expanded and cleared on collapse.
  */
 function NsecRevealRow() {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = React.useState(false);
   const [nsec, setNsec] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -125,7 +128,7 @@ function NsecRevealRow() {
           setLoadError(
             err instanceof Error
               ? err.message
-              : "Failed to retrieve private key.",
+              : t("settings.profile.err.privateKey"),
           );
       } finally {
         if (!fetchCancelledRef.current) setIsLoading(false);
@@ -141,9 +144,13 @@ function NsecRevealRow() {
   return (
     <div className="px-4 py-3" data-testid="profile-private-key-row">
       <div className="flex items-center justify-between gap-4">
-        <p className="text-sm font-medium">Private key</p>
+        <p className="text-sm font-medium">{t("settings.profile.privateKey")}</p>
         <button
-          aria-label={isOpen ? "Hide private key" : "Reveal private key"}
+          aria-label={
+            isOpen
+              ? t("settings.profile.hideKey")
+              : t("settings.profile.revealKey")
+          }
           className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           data-testid="profile-private-key-toggle"
           onClick={() => void handleReveal()}
@@ -152,12 +159,12 @@ function NsecRevealRow() {
           {isOpen ? (
             <>
               <EyeOff className="h-4 w-4 shrink-0" />
-              Hide
+              {t("settings.profile.hide")}
             </>
           ) : (
             <>
               <Eye className="h-4 w-4 shrink-0" />
-              Reveal
+              {t("settings.profile.reveal")}
             </>
           )}
         </button>
@@ -165,7 +172,7 @@ function NsecRevealRow() {
       {isOpen ? (
         <div className="mt-2">
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : loadError ? (
             <p className="text-sm text-destructive">{loadError}</p>
           ) : nsec ? (
@@ -190,9 +197,14 @@ function EditProfileMetadataButton({
   disabled: boolean;
   isEditing: boolean;
 }) {
+  const { t } = useI18n();
   const Icon = isEditing ? Check : Pencil;
-  const actionLabel = isEditing ? "Done" : "Edit";
-  const accessibleLabel = isEditing ? `Done editing ${label}` : `Edit ${label}`;
+  const actionLabel = isEditing
+    ? t("settings.profile.done")
+    : t("settings.profile.edit");
+  const accessibleLabel = isEditing
+    ? t("settings.profile.doneLabel", { label })
+    : t("settings.profile.editLabel", { label });
 
   return (
     <button
@@ -386,9 +398,10 @@ export function ProfileSettingsCard({
     nextDisplayName ||
     profile?.displayName ||
     fallbackDisplayName ||
-    "Your profile";
-  const resolvedPubkey = profile?.pubkey ?? currentPubkey ?? "Unavailable";
-  const nip05Handle = profile?.nip05Handle ?? "Not set";
+    t("settings.profile.yourProfile");
+  const resolvedPubkey =
+    profile?.pubkey ?? currentPubkey ?? t("settings.profile.unavailable");
+  const nip05Handle = profile?.nip05Handle ?? t("settings.profile.notSet");
   const emojiAvatarPreview = React.useMemo(
     () => parseEmojiAvatarDataUrl(avatarUrlDraft),
     [avatarUrlDraft],
@@ -647,8 +660,8 @@ export function ProfileSettingsCard({
                                 aria-expanded={isAvatarEditorOpen}
                                 aria-label={
                                   isAvatarEditorSaving
-                                    ? "Saving profile photo"
-                                    : "Edit profile photo"
+                                    ? t("settings.profile.savingPhoto")
+                                    : t("settings.profile.editPhoto")
                                 }
                                 className={avatarEditButtonClassName}
                                 data-testid="profile-avatar-edit"
@@ -656,14 +669,14 @@ export function ProfileSettingsCard({
                                 onClick={openAvatarEditor}
                                 title={
                                   isAvatarEditorSaving
-                                    ? "Saving profile photo"
-                                    : "Edit profile photo"
+                                    ? t("settings.profile.savingPhoto")
+                                    : t("settings.profile.editPhoto")
                                 }
                                 type="button"
                               >
                                 {isAvatarEditorSaving && !isAvatarEditorOpen ? (
                                   <Spinner
-                                    aria-label="Saving avatar"
+                                    aria-label={t("settings.profile.savingAvatar")}
                                     className="h-4 w-4 border-2"
                                   />
                                 ) : (
@@ -692,7 +705,7 @@ export function ProfileSettingsCard({
                           />
                           {shouldShowAnimatedPreview ? null : emojiAvatarPreview ? (
                             <div
-                              aria-label={`${resolvedName} avatar`}
+                              aria-label={t("settings.profile.avatarAlt", { name: resolvedName })}
                               className="relative flex h-full w-full shrink-0 items-center justify-center overflow-hidden rounded-full shadow-xs"
                               data-testid="profile-avatar-preview"
                               role="img"
@@ -765,12 +778,12 @@ export function ProfileSettingsCard({
                         >
                           <div className="flex min-h-14 items-center justify-between gap-4 px-4 py-3">
                             <h2 className="text-lg font-semibold tracking-tight">
-                              Profile info
+                              {t("settings.profile.profileInfo")}
                             </h2>
                             <EditProfileMetadataButton
                               disabled={updateProfileMutation.isPending}
                               isEditing={isEditingProfileMetadata}
-                              label="profile info"
+                              label={t("settings.profile.profileInfo")}
                               onClick={handleProfileMetadataEdit}
                               testId="profile-metadata-edit"
                             />
@@ -865,11 +878,10 @@ export function ProfileSettingsCard({
                             >
                               <div className="min-w-0">
                                 <h2 className="text-lg font-semibold tracking-tight">
-                                  Identity
+                                  {t("settings.profile.identity")}
                                 </h2>
                                 <p className="mt-1 text-sm font-normal text-muted-foreground">
-                                  Your keypair and NIP-05 handle are fixed for
-                                  this device.
+                                  {t("settings.profile.identityDesc")}
                                 </p>
                               </div>
                               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-[color,transform] duration-150 ease-out group-open:rotate-180 group-hover/identity:text-foreground group-focus-visible/identity:text-foreground" />
@@ -882,13 +894,13 @@ export function ProfileSettingsCard({
                                 copyValue={
                                   profile?.pubkey ?? currentPubkey ?? undefined
                                 }
-                                label="Public key"
+                                label={t("settings.profile.publicKey")}
                                 testId="profile-pubkey"
                                 value={resolvedPubkey}
                               />
                               <IdentityRow
                                 copyValue={profile?.nip05Handle ?? undefined}
-                                label="NIP-05 handle"
+                                label={t("settings.profile.nip05")}
                                 testId="profile-nip05"
                                 value={nip05Handle}
                               />
